@@ -10,9 +10,12 @@
 <meta name="theme-color" content="#0f766e">
 <title>Hyrox HQ</title>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #0f141a; color: #8b98a5;
+  html, body { margin: 0; background: #0f141a; color: #8b98a5;
     font: 15px/1.5 -apple-system, system-ui, sans-serif; }
-  iframe { display: block; border: 0; width: 100%; height: 100vh; height: 100dvh; }
+  /* rezerwuj notch (góra) i home-indicator (dół), żeby treść nie wchodziła pod pasek stanu iOS */
+  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  iframe { display: block; border: 0; width: 100%;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
   .hint { padding: 24px; max-width: 520px; }
   .hint code { color: #2dd4bf; word-break: break-all; }
 </style>
