@@ -10,22 +10,30 @@
 <meta name="theme-color" content="#0f766e">
 <title>Hyrox HQ</title>
 <style>
-  html, body { margin: 0; background: #0f141a; color: #8b98a5;
-    font: 15px/1.5 -apple-system, system-ui, sans-serif; }
-  /* rezerwuj notch (góra) i home-indicator (dół), żeby treść nie wchodziła pod pasek stanu iOS */
-  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
-  iframe { display: block; border: 0; width: 100%;
-    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  html, body { margin: 0; padding: 0; height: 100%; background: #f6f7f9;
+    color: #8b98a5; font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  /* Paski bezpiecznej strefy w kolorach apki (jasny/ciemny), żeby wtapiały się w treść:
+     góra = tło strony (jak nagłówek), dół = kolor belki zakładek (biały). */
+  .safe-top { position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
+    background: #f6f7f9; z-index: 2; }
+  .safe-bot { position: fixed; bottom: 0; left: 0; right: 0; height: env(safe-area-inset-bottom, 0px);
+    background: #ffffff; z-index: 2; }
+  iframe { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px);
+    bottom: env(safe-area-inset-bottom, 0px); width: 100%; border: 0; }
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #0f141a; }
+    .safe-top { background: #0f141a; }
+    .safe-bot { background: #1a222c; }
+  }
   .hint { padding: 24px; max-width: 520px; }
   .hint code { color: #2dd4bf; word-break: break-all; }
 </style>
 </head>
 <body>
 <!--
-  Nakładka Hyrox HQ — osadza apkę Apps Script w iframe, żeby zniknął pasek
-  "aplikacja utworzona przez użytkownika". Wymaga w apce setXFrameOptionsMode(ALLOWALL) (jest od wersji 10).
-  Token NIE jest w tym pliku — podajesz go w adresie po #, np. .../#hx-xxxx — więc repo może być publiczne.
-  Na telefon dodaj do ekranu głównego pełny adres z tokenem.
+  Nakładka Hyrox HQ — osadza apkę Apps Script w iframe (znika pasek "utworzone przez użytkownika").
+  Wymaga w apce setXFrameOptionsMode(ALLOWALL). Token NIE jest w repo — czytany z location.hash.
+  Paski safe-top/safe-bot rezerwują notch i home-indicator, w kolorach apki (light/dark).
 -->
 <div id="app"></div>
 <script>
@@ -33,6 +41,7 @@
   var token = (location.hash || "").replace(/^#k?=?/, "").trim();
   var el = document.getElementById("app");
   if (token) {
+    document.body.insertAdjacentHTML("beforeend", '<div class="safe-top"></div><div class="safe-bot"></div>');
     var f = document.createElement("iframe");
     f.src = EXEC + "?k=" + encodeURIComponent(token);
     f.title = "Hyrox HQ";
