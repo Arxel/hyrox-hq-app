@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hyrox HQ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f766e">
+<title>Hyrox HQ</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0f141a; color: #8b98a5;
+    font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  iframe { display: block; border: 0; width: 100%; height: 100vh; height: 100dvh; }
+  .hint { padding: 24px; max-width: 520px; }
+  .hint code { color: #2dd4bf; word-break: break-all; }
+</style>
+</head>
+<body>
+<!--
+  Nakładka Hyrox HQ — osadza apkę Apps Script w iframe, żeby zniknął pasek
+  "aplikacja utworzona przez użytkownika". Wymaga w apce setXFrameOptionsMode(ALLOWALL) (jest od wersji 10).
+  Token NIE jest w tym pliku — podajesz go w adresie po #, np. .../#hx-xxxx — więc repo może być publiczne.
+  Na telefon dodaj do ekranu głównego pełny adres z tokenem.
+-->
+<div id="app"></div>
+<script>
+  var EXEC = "https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
+  var token = (location.hash || "").replace(/^#k?=?/, "").trim();
+  var el = document.getElementById("app");
+  if (token) {
+    var f = document.createElement("iframe");
+    f.src = EXEC + "?k=" + encodeURIComponent(token);
+    f.title = "Hyrox HQ";
+    f.setAttribute("allow", "clipboard-write; fullscreen");
+    el.replaceWith(f);
+  } else {
+    el.className = "hint";
+    el.innerHTML = "Dodaj token do adresu po <code>#</code>, np.<br><code>" +
+      location.origin + location.pathname + "#TWOJ_TOKEN</code><br><br>Ten adres (z tokenem) dodaj na ekran główny telefonu.";
+  }
+</script>
+</body>
+</html>
