@@ -19,10 +19,12 @@
 @media(prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#1a222c;--ink:#e6edf3;--mut:#8b98a5;--acc:#2dd4bf;--line:#2c3844;
 --good:#0ca30c;--warn:#fab219;--crit:#e66767;--goodbg:#12210f;--warnbg:#292211;--critbg:#2b1616;
 --s1:#3987e5;--s2:#199e70;--goodtxt:#0ca30c}}
-*{box-sizing:border-box}
+*{box-sizing:border-box;max-width:100%}
 html{background:var(--bg)}
+html,body{overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,system-ui,sans-serif;
 padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area-inset-bottom,0px))}
+.x,.em,.ev,.note,.t,.rx{overflow-wrap:anywhere}
 h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:12px}
 .head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .refresh{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;
@@ -129,9 +131,26 @@ var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
   apiFuel:function(a){return Object.assign({app:"fuel"},a);}};
 function run(fn,arg,cb){post(OPS[fn](arg),cb);}
 function boot(){
-  if(!TOKEN){$("splash").innerHTML="Brak tokenu. Otwórz apkę z adresu z <b>#TWOJ_TOKEN</b> na końcu.";return;}
+  if(!TOKEN){tokenForm();return;}
   $("splash").style.display="block";$("splash").textContent="Ładowanie…";
   post({app:"boot"},function(r){BOOT=r.boot;$("splash").style.display="none";renderAll();});
+}
+function tokenForm(){
+  $("splash").style.display="block";
+  $("splash").innerHTML='<div class="card" style="max-width:420px;margin:10px auto;text-align:left">'+
+    '<div class="t">Podaj token dostępu</div>'+
+    '<div class="x" style="margin:6px 0 10px">Jednorazowo: wklej token (hx-…) albo cały adres apki z tokenem po #. Zapisze się trwale na tym urządzeniu.</div>'+
+    '<input id="tok" type="text" autocapitalize="off" autocorrect="off" placeholder="hx-…" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit">'+
+    '<div class="btnrow"><button class="btn pri" onclick="saveTok()">Zapisz i uruchom</button></div></div>';
+}
+function saveTok(){
+  var v=($("tok").value||"").trim();
+  var m=v.match(/hx-[A-Za-z0-9]+/);
+  var t=m?m[0]:(v.indexOf("#")>-1?v.slice(v.lastIndexOf("#")+1).trim():v);
+  if(!t||t.length<6){toast("To nie wygląda jak token");return;}
+  TOKEN=t;
+  try{localStorage.setItem("hx_token",TOKEN);}catch(e){}
+  boot();
 }
 function dd(iso){return Math.ceil((new Date(iso+"T00:00:00")-new Date(BOOT.today+"T00:00:00"))/86400000);}
 function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
@@ -192,6 +211,8 @@ function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");
 function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
 function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
 document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
+document.addEventListener("focusin",function(e){var t=e.target&&e.target.tagName;if(t==="TEXTAREA"||t==="INPUT"||t==="SELECT")document.querySelector(".tabs").style.display="none";});
+document.addEventListener("focusout",function(){setTimeout(function(){var a=document.activeElement&&document.activeElement.tagName;if(a!=="TEXTAREA"&&a!=="INPUT"&&a!=="SELECT")document.querySelector(".tabs").style.display="flex";},150);});
 boot();
 </script>
 </body>
