@@ -7,51 +7,192 @@
 <meta name="apple-mobile-web-app-title" content="Hyrox HQ">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141a" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
 <title>Hyrox HQ</title>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #f6f7f9;
-    color: #8b98a5; font: 15px/1.5 -apple-system, system-ui, sans-serif; }
-  /* Paski bezpiecznej strefy w kolorach apki (jasny/ciemny), żeby wtapiały się w treść:
-     góra = tło strony (jak nagłówek), dół = kolor belki zakładek (biały). */
-  .safe-top { position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
-    background: #f6f7f9; z-index: 2; }
-  .safe-bot { position: fixed; bottom: 0; left: 0; right: 0; height: env(safe-area-inset-bottom, 0px);
-    background: #ffffff; z-index: 2; }
-  iframe { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px);
-    bottom: env(safe-area-inset-bottom, 0px); width: 100%; border: 0; }
-  @media (prefers-color-scheme: dark) {
-    html, body { background: #0f141a; }
-    .safe-top { background: #0f141a; }
-    .safe-bot { background: #1a222c; }
-  }
-  .hint { padding: 24px; max-width: 520px; }
-  .hint code { color: #2dd4bf; word-break: break-all; }
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--mut:#64748b;--acc:#0f766e;--line:#e2e8f0;
+--good:#0ca30c;--warn:#b45309;--crit:#d03b3b;--goodbg:#f0faf0;--warnbg:#fef8e7;--critbg:#fdf0f0;
+--s1:#2a78d6;--s2:#1baf7a;--goodtxt:#006300}
+@media(prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#1a222c;--ink:#e6edf3;--mut:#8b98a5;--acc:#2dd4bf;--line:#2c3844;
+--good:#0ca30c;--warn:#fab219;--crit:#e66767;--goodbg:#12210f;--warnbg:#292211;--critbg:#2b1616;
+--s1:#3987e5;--s2:#199e70;--goodtxt:#0ca30c}}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,system-ui,sans-serif;
+padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area-inset-bottom,0px))}
+h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:12px}
+.head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.refresh{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;
+padding:4px 12px;font-size:13px;cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12px;color:var(--mut)}
+.chip b{color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.card.today{border-color:var(--acc)}.card.past{opacity:.6}
+.d{font-size:12px;color:var(--mut)}.t{font-weight:650;margin:2px 0;font-size:16px}.x{font-size:13px;color:var(--mut);white-space:pre-wrap}
+.st{float:right;font-size:12px;color:var(--acc);font-weight:600}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:18px 0 8px}
+.sem{border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line)}
+.sem.l0{background:var(--goodbg);border-color:var(--good)}.sem.l1{background:var(--warnbg);border-color:var(--warn)}.sem.l2{background:var(--critbg);border-color:var(--crit)}
+.sem .lbl{font-weight:700;font-size:14px}
+.sem.l0 .lbl{color:var(--good)}.sem.l1 .lbl{color:var(--warn)}.sem.l2 .lbl{color:var(--crit)}
+.sem ul{margin:6px 0 0;padding-left:18px;font-size:13px}.sem .vals{font-size:12px;color:var(--mut);margin-top:6px}
+.btn{display:inline-block;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.form{margin-top:10px;display:none}.form.open{display:block}
+.form label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+.form select,.form input,.form textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.form textarea{min-height:56px}
+.grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.phases{display:flex;height:20px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.phases .ph{display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mut);background:var(--line)}
+.phases .ph.on{background:var(--acc);color:#fff}.phases .ph+.ph{border-left:2px solid var(--bg)}
+.lev{display:grid;grid-template-columns:88px 1fr 84px;gap:6px 8px;align-items:center}
+.lev .n{font-size:12px;color:var(--mut);text-align:right}
+.lev .bar{position:relative;height:13px;background:var(--line);border-radius:4px}
+.lev .fill{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:4px}
+.lev .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.lev .g{font-size:11px;color:var(--goodtxt);font-weight:600}
+.mrow{display:flex;gap:5px;align-items:flex-end;height:70px}
+.mcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.mcol .mv{font-size:10px;color:var(--ink);font-weight:600}.mcol .mb{width:100%;border-radius:3px 3px 0 0;min-height:3px;background:var(--s2)}
+.mcol .mb.flag{background:var(--crit)}.mcol .ml{font-size:9px;color:var(--mut)}.mcol .mdelta{font-size:9px}
+.acwr{display:flex;align-items:baseline;gap:10px}.acwr .r{font-size:30px;font-weight:700}
+.acwr .r.l0{color:var(--goodtxt)}.acwr .r.l1{color:var(--warn)}.acwr .r.l2{color:var(--crit)}
+.rule{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.rule:last-child{border-bottom:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+.dot.ok{background:var(--good)}.dot.watch{background:var(--warn)}.dot.fired{background:var(--crit)}.dot.na{background:var(--mut);opacity:.4}
+.rule .rn{font-weight:600}.rule .rx{color:var(--mut)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--mut)}
+.fbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.entry{border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px}
+.entry .eh{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+.entry .em{font-size:13px;margin:3px 0}.entry .ev{font-size:12px;color:var(--acc);white-space:pre-wrap}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);
+padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab{flex:1;text-align:center;padding:11px 0 13px;font-size:12px;color:var(--mut);cursor:pointer;font-weight:600}
+.tab.on{color:var(--acc);box-shadow:inset 0 3px 0 var(--acc)}
+.view{display:none}.view.on{display:block}
+.toast{position:fixed;bottom:calc(62px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
+background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}
+.note{border-left:3px solid var(--line);padding:4px 10px;margin-bottom:8px;font-size:13px}
+.note .m{color:var(--mut);font-size:11px}.note.nowa{border-left-color:var(--acc)}
+.splash{padding:40px 10px;text-align:center;color:var(--mut)}
 </style>
 </head>
 <body>
-<!--
-  Nakładka Hyrox HQ — osadza apkę Apps Script w iframe (znika pasek "utworzone przez użytkownika").
-  Wymaga w apce setXFrameOptionsMode(ALLOWALL). Token NIE jest w repo — czytany z location.hash.
-  Paski safe-top/safe-bot rezerwują notch i home-indicator, w kolorach apki (light/dark).
--->
-<div id="app"></div>
+<div class="head"><h1>Hyrox HQ</h1><span class="sub" id="stan"></span><button class="refresh" onclick="boot()">⟳ odśwież</button></div>
+<div id="splash" class="splash">Ładowanie…</div>
+<div id="v-dzis" class="view on"></div>
+<div id="v-tydz" class="view"></div>
+<div id="v-analiza" class="view"></div>
+<div id="v-dziennik" class="view"></div>
+<div id="v-note" class="view"></div>
+<div class="tabs">
+  <div class="tab on" data-v="dzis">Dziś</div>
+  <div class="tab" data-v="tydz">Tydzień</div>
+  <div class="tab" data-v="analiza">Analiza</div>
+  <div class="tab" data-v="dziennik">Dziennik</div>
+  <div class="tab" data-v="note">Notatki</div>
+</div>
+<div class="toast" id="toast"></div>
 <script>
-  var EXEC = "https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
-  var token = (location.hash || "").replace(/^#k?=?/, "").trim();
-  var el = document.getElementById("app");
-  if (token) {
-    document.body.insertAdjacentHTML("beforeend", '<div class="safe-top"></div><div class="safe-bot"></div>');
-    var f = document.createElement("iframe");
-    f.src = EXEC + "?k=" + encodeURIComponent(token);
-    f.title = "Hyrox HQ";
-    f.setAttribute("allow", "clipboard-write; fullscreen");
-    el.replaceWith(f);
-  } else {
-    el.className = "hint";
-    el.innerHTML = "Dodaj token do adresu po <code>#</code>, np.<br><code>" +
-      location.origin + location.pathname + "#TWOJ_TOKEN</code><br><br>Ten adres (z tokenem) dodaj na ekran główny telefonu.";
-  }
+var EXEC="https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
+var TOKEN=(location.hash||"").replace(/^#k?=?/,"").trim();
+if(TOKEN){try{localStorage.setItem("hx_token",TOKEN);}catch(e){}}
+else{try{TOKEN=localStorage.getItem("hx_token")||"";}catch(e){}}
+var BOOT=null;
+var FAZY=[{n:"Rozbieg",od:"2026-06-30",do_:"2026-07-05"},{n:"Budowa",od:"2026-07-06",do_:"2026-08-16"},{n:"Specyficzna",od:"2026-08-17",do_:"2026-09-28"},{n:"Szczyt/Mix",od:"2026-09-29",do_:"2026-10-15"},{n:"Re-sharpen",od:"2026-10-16",do_:"2026-11-20"}];
+var LEV=[{n:"Sled Pull",nowS:262,celS:225,medS:211,now:"4:22",cel:"3:45",g:"−37 s"},{n:"Burpees",nowS:307,celS:265,medS:255,now:"5:07",cel:"4:25",g:"−42 s"},{n:"Wall Balls",nowS:336,celS:300,medS:298,now:"5:36",cel:"5:00",g:"−36 s"},{n:"Roxzone",nowS:290,celS:255,medS:260,now:"~4:50",cel:"4:15",g:"−35 s"},{n:"Bieg 8 km",nowS:2225,celS:2145,medS:2167,now:"37:05",cel:"35:45",g:"−80 s"}];
+var FILTER="";
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function $(id){return document.getElementById(id);}
+function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
+function post(body,cb){
+  fetch(EXEC,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(Object.assign({token:TOKEN},body))})
+  .then(function(r){return r.json();})
+  .then(function(r){if(r&&r.ok===false){toast("Błąd: "+r.error);}else{cb&&cb(r);}})
+  .catch(function(e){toast("Błąd sieci: "+e.message);});
+}
+var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
+  apiQuickLog:function(a){return Object.assign({app:"quicklog"},a);},
+  apiNote:function(a){return{app:"note",text:a};},
+  apiMorning:function(a){return Object.assign({app:"morning"},a);},
+  apiFuel:function(a){return Object.assign({app:"fuel"},a);}};
+function run(fn,arg,cb){post(OPS[fn](arg),cb);}
+function boot(){
+  if(!TOKEN){$("splash").innerHTML="Brak tokenu. Otwórz apkę z adresu z <b>#TWOJ_TOKEN</b> na końcu.";return;}
+  $("splash").style.display="block";$("splash").textContent="Ładowanie…";
+  post({app:"boot"},function(r){BOOT=r.boot;$("splash").style.display="none";renderAll();});
+}
+function dd(iso){return Math.ceil((new Date(iso+"T00:00:00")-new Date(BOOT.today+"T00:00:00"))/86400000);}
+function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
+function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
+function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"')\">✓ zrobione</button></div>":"";return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(p.x)+"</div>"+btn+"</div>";}
+function semHtml(){var s=BOOT.semafor,names=["✅ ZIELONO","⚠️ ŻÓŁTO","⛔ CZERWONO"];var v=s.vals?("<div class=\"vals\">RHR "+esc(s.vals.rhr)+" · HRV "+esc(s.vals.hrv)+" ms · sen "+esc(s.vals.sen)+" h · świeżość "+esc(s.vals.sw)+"</div>"):"";return "<div class=\"sem l"+s.lvl+"\"><span class=\"lbl\">"+names[s.lvl]+"</span><ul>"+s.msgs.map(function(m){return "<li>"+esc(m)+"</li>";}).join("")+"</ul>"+v+"</div>";}
+function selOpts(n,sel){var h="";for(var i=1;i<=n;i++)h+="<option"+(i===sel?" selected":"")+">"+i+"</option>";return h;}
+function renderDzis(){
+  var today=BOOT.plan.find(function(p){return p.d===BOOT.today;});
+  var tom=BOOT.plan.find(function(p){return p.d>BOOT.today;});
+  var h=semHtml()+chips();
+  h+="<div class=\"btnrow\"><button class=\"btn\" onclick=\"tf('mform')\">🌅 Check-in</button><button class=\"btn\" onclick=\"tf('fform')\">🍽️ Makra</button></div>";
+  h+="<div class=\"form\" id=\"mform\"><div class=\"grid2\"><div><label>Świeżość</label><select id=\"m-sw\">"+selOpts(5,BOOT.ranoToday&&BOOT.ranoToday.sw?parseInt(BOOT.ranoToday.sw):3)+"</select></div><div><label>Waga kg</label><input id=\"m-waga\" type=\"number\" step=\"0.1\" value=\""+(BOOT.ranoToday?esc(BOOT.ranoToday.waga):"")+"\"></div><div></div></div><label>Ból / sygnał (opcjonalnie)</label><textarea id=\"m-bol\" placeholder=\"np. łydka lekko ciągnie\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendMorning()\">Zapisz poranek</button></div></div>";
+  h+="<div class=\"form\" id=\"fform\"><div class=\"grid2\"><div><label>Kcal</label><input id=\"f-kcal\" type=\"number\"></div><div><label>Białko g</label><input id=\"f-bialko\" type=\"number\"></div><div></div></div><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendFuel()\">Zapisz makra</button></div></div>";
+  h+="<h2>Dziś</h2>";
+  if(today){
+    h+=cardHtml(today,false);
+    h+="<div class=\"btnrow\">"+(today.st.indexOf("✓")===-1?"<button class=\"btn pri\" onclick=\"done('"+today.d+"')\">✓ Zrobione</button>":"")+"<button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>";
+    h+="<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog()\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
+  } else h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień.</div></div>";
+  if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false);
+  $("v-dzis").innerHTML=h;
+}
+function renderTydz(){var a=BOOT.adh;var h="<div class=\"chips\"><span class=\"chip\">Tydzień: <b>"+a.weekDone+"/"+a.weekDue+" ✓</b></span>"+(a.seasonPct!=null?"<span class=\"chip\">Sezon: <b>"+a.seasonPct+"% zgodnie</b> ("+a.seasonN+")</span>":"")+"</div>";h+=BOOT.plan.map(function(p){return cardHtml(p,true);}).join("");$("v-tydz").innerHTML=h;}
+function bars(el,arr){var vs=arr.map(function(a){return a.km;});var mx=Math.max.apply(null,vs)||1;el.innerHTML=arr.map(function(a){var hgt=8+a.km/mx*54;var dl=a.delta==null?"":(a.current?"w toku":(a.delta>=0?"+":"")+a.delta+"%");return "<div class=\"mcol\"><div class=\"mv\">"+a.km+"</div><div class=\"mb"+(a.flag?" flag":"")+"\" style=\"height:"+Math.round(hgt)+"px"+(a.current?";opacity:.5":"")+"\"></div><div class=\"mdelta\" style=\"color:"+(a.flag?"var(--crit)":"var(--mut)")+"\">"+dl+"</div><div class=\"ml\">"+esc(a.label)+"</div></div>";}).join("");}
+function renderAnaliza(){
+  var h="<h2>Dźwignie — teraz → cel (kreska = mediana sub-70)</h2><div class=\"lev\">";
+  h+=LEV.map(function(z){var max=z.nowS*1.08,fw=z.celS/max*100,full=z.nowS/max*100,med=z.medS/max*100;return "<div class=\"n\">"+esc(z.n)+"</div><div class=\"bar\"><div class=\"fill\" style=\"width:"+full.toFixed(1)+"%;opacity:.35\"></div><div class=\"fill\" style=\"width:"+fw.toFixed(1)+"%\"></div><div class=\"tick\" style=\"left:"+med.toFixed(1)+"%\"></div></div><div><b>"+esc(z.now)+"</b>→"+esc(z.cel)+" <span class=\"g\">"+esc(z.g)+"</span></div>";}).join("")+"</div>";
+  h+="<h2>Fazy sezonu</h2><div class=\"phases\">";
+  var tod=day(BOOT.today);
+  h+=FAZY.map(function(f){var w=day(f.do_)-day(f.od)+1,on=tod>=day(f.od)&&tod<=day(f.do_);return "<div class=\"ph"+(on?" on":"")+"\" style=\"flex:"+w+"\">"+esc(f.n)+"</div>";}).join("")+"</div>";
+  h+="<h2>Objętość biegowa [km/tydz] — strażnik +10% (łydka)</h2>";
+  if(BOOT.analiza.volume.length)h+="<div class=\"card\"><div class=\"mrow\" id=\"volbars\"></div></div>";else h+="<div class=\"sub\">brak danych biegowych</div>";
+  var ac=BOOT.analiza.acwr;
+  h+="<h2>ACWR (wolumen: 7 dni / średnia 28 dni)</h2><div class=\"card\">";
+  if(ac.ratio!=null){var labs=["w oknie (0,8–1,3)","poza oknem — obserwuj","skok >1,5 — ryzyko"];h+="<div class=\"acwr\"><span class=\"r l"+ac.lvl+"\">"+ac.ratio.toFixed(2)+"</span><span class=\"sub\">acute "+ac.acute+" km / chronic "+ac.chronic+" km-tydz<br>"+labs[ac.lvl]+"</span></div>";}else h+="<div class=\"sub\">"+esc(ac.note)+"</div>";
+  h+="</div>";
+  h+="<h2>Reguły reakcji — status na dziś</h2><div class=\"card\">";
+  h+=BOOT.analiza.rules.map(function(r){return "<div class=\"rule\"><span class=\"dot "+r.st+"\"></span><div><span class=\"rn\">"+esc(r.name)+"</span><br><span class=\"rx\">"+esc(r.txt)+"</span></div></div>";}).join("")+"</div>";
+  $("v-analiza").innerHTML=h;
+  if(BOOT.analiza.volume.length)bars($("volbars"),BOOT.analiza.volume);
+}
+function renderDziennik(){
+  var types=[["","Wszystko"],["Bieg","Bieg"],["Siła","Siła"],["Box","Box"],["Mixed","Mixed"],["Symulacja","Symulacja"]];
+  var h="<div class=\"filters\">"+types.map(function(t){return "<span class=\"fbtn"+(FILTER===t[0]?" on":"")+"\" onclick=\"setFilter('"+t[0]+"')\">"+esc(t[1])+"</span>";}).join("")+"</div>";
+  var rows=BOOT.dziennik.filter(function(e){return !FILTER||String(e.typ).indexOf(FILTER)>-1;});
+  if(!rows.length)h+="<div class=\"sub\">brak wpisów</div>";
+  h+=rows.map(function(e){var m=[e.dist?e.dist+" km":"",e.czas,e.tempo?e.tempo+"/km":"",e.hr?"HR "+e.hr:"",e.rpe?"RPE "+e.rpe:""].filter(Boolean).join(" · ");return "<div class=\"entry\"><div class=\"eh\"><span>"+esc(e.d)+" · "+esc(e.typ)+"</span><span>św "+esc(e.sw)+"</span></div>"+(m?"<div class=\"em\">"+esc(m)+"</div>":"")+(e.nota?"<div class=\"x\">"+esc(e.nota)+"</div>":"")+(e.werdykt?"<div class=\"ev\">"+esc(e.werdykt)+"</div>":"")+"</div>";}).join("");
+  $("v-dziennik").innerHTML=h;
+}
+function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote()\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
+function renderAll(){$("stan").textContent="stan na "+BOOT.today;renderDzis();renderTydz();renderAnaliza();renderDziennik();renderNote();}
+function tf(id){$(id).classList.toggle("open");}
+function setFilter(f){FILTER=f;renderDziennik();}
+function done(d){run("apiCheckDone",d,function(){BOOT.plan.forEach(function(p){if(p.d===d)p.st="✓";});BOOT.adh.weekDone++;renderAll();toast("Odhaczone ✓");});}
+function sendLog(){var o={day:$("l-day").value,rpe:$("l-rpe").value,sw:$("l-sw").value,note:$("l-note").value};var t=BOOT.plan.find(function(p){return p.d===BOOT.today;});if(t)o.session=t.t;run("apiQuickLog",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"log",x:r.txt,s:"nowa"});renderNote();toast("Zapisane — Claude przetworzy");});}
+function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");return;}run("apiNote",t,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:t,s:"nowa"});renderNote();toast("W inboxie");});}
+function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
+function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
+document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
+boot();
 </script>
 </body>
 </html>
