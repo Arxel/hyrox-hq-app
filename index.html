@@ -48,7 +48,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)
 .btnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .form{margin-top:10px;display:none}.form.open{display:block}
 .form label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
-.form select,.form input,.form textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.form select,.form input,.form textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
 .form textarea{min-height:56px}
 .grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .phases{display:flex;height:20px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
@@ -97,7 +97,7 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 .ptable td:first-child{color:var(--mut)}
 .ptable tr:last-child td{border-bottom:0}
 .ct{font-size:14px;font-weight:650;margin-bottom:2px}
-#v-tools select,#v-tools input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+#v-tools select,#v-tools input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
 #v-tools label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
 .rc{display:grid;grid-template-columns:1fr 84px;gap:5px 8px;align-items:center;margin-top:8px}
 #v-tools .rc label{font-size:13px;color:var(--ink);margin:0}
@@ -223,7 +223,7 @@ function tokenForm(){
   $("splash").innerHTML='<div class="card" style="max-width:420px;margin:10px auto;text-align:left">'+
     '<div class="t">Podaj token dostępu</div>'+
     '<div class="x" style="margin:6px 0 10px">Jednorazowo: wklej token (hx-…) albo cały adres apki z tokenem po #. Zapisze się trwale na tym urządzeniu.</div>'+
-    '<input id="tok" type="text" autocapitalize="off" autocorrect="off" placeholder="hx-…" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit">'+
+    '<input id="tok" type="text" autocapitalize="off" autocorrect="off" placeholder="hx-…" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px">'+
     '<div class="btnrow"><button class="btn pri" onclick="saveTok()">Zapisz i uruchom</button></div></div>';
 }
 function saveTok(){
@@ -327,7 +327,7 @@ function renderDziennik(){
   h+=rows.map(function(e){var m=[e.dist?e.dist+" km":"",e.czas,e.tempo?e.tempo+"/km":"",e.hr?"HR "+e.hr:"",e.rpe?"RPE "+e.rpe:""].filter(Boolean).join(" · ");return "<div class=\"entry\"><div class=\"eh\"><span>"+esc(e.d)+" · "+esc(e.typ)+"</span><span>św "+esc(e.sw)+"</span></div>"+(m?"<div class=\"em\">"+esc(m)+"</div>":"")+(e.nota?"<div class=\"x\">"+esc(e.nota)+"</div>":"")+(e.werdykt?"<div class=\"ev\">"+esc(e.werdykt)+"</div>":"")+"</div>";}).join("");
   $("v-dziennik").innerHTML=h;
 }
-function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote()\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
+function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote()\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
 // ---------- Narzędzia (klienckie kalkulatory) ----------
 function pad2(n){return (n<10?"0":"")+n;}
 function parseMS(s){var p=String(s||"").trim().split(":");if(p.length!==2)return null;var m=parseInt(p[0],10),sec=parseInt(p[1],10);if(isNaN(m)||isNaN(sec))return null;return m*60+sec;}
@@ -444,30 +444,9 @@ function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");
 function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
 function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
 document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
-// Stopka vs klawiatura iOS: fixed bottom:0 na iOS jest liczone od layout viewportu, więc gdy
-// klawiatura kurczy visual viewport, stopka wisi pod klawiaturą (albo iOS renderuje ją w środku).
-// Zamiast chować/pokazywać (flaky przez timing powrotu viewportu) — przesuwamy .tabs w górę tak,
-// by zawsze siedziała na dole WIDOCZNEGO obszaru: overlap = innerHeight - vv.height - vv.offsetTop.
-// Przy działającym interactive-widget=resizes-content (Chromium) innerHeight kurczy się z viewportem
-// → overlap≈0 → translateY(0), a bottom:0 jest już poprawne. Oba mechanizmy komponują się bez konfliktu.
-(function(){
-  var tabsEl=document.querySelector(".tabs");
-  if(window.visualViewport){
-    var vv=window.visualViewport;
-    var vvFix=function(){
-      var overlap=window.innerHeight-vv.height-vv.offsetTop;
-      if(overlap<1)overlap=0;
-      tabsEl.style.transform=overlap?"translateY(-"+overlap+"px)":"";
-    };
-    vv.addEventListener("resize",vvFix);
-    vv.addEventListener("scroll",vvFix);
-    window.addEventListener("focusout",function(){setTimeout(vvFix,50);});
-    vvFix();
-  }else{
-    document.addEventListener("focusin",function(e){var t=e.target&&e.target.tagName;if(t==="TEXTAREA"||t==="INPUT"||t==="SELECT")tabsEl.style.display="none";});
-    document.addEventListener("focusout",function(){setTimeout(function(){var a=document.activeElement&&document.activeElement.tagName;if(a!=="TEXTAREA"&&a!=="INPUT"&&a!=="SELECT")tabsEl.style.display="flex";},150);});
-  }
-})();
+// Stopka: zwykłe position:fixed;bottom:0 (patrz CSS .tabs) — bez gimnastyki z visualViewport.
+// Podskakiwanie na przełączeniu zakładek brało się z listenerów vv.scroll/resize; a „powiększanie"
+// layoutu po dotknięciu pola to auto-zoom iOS na inputach <16px — ugaszony font-size:16px na polach.
 boot();
 </script>
 </body>
