@@ -129,6 +129,12 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 .tmr .segt{text-align:center;font-size:12px;color:var(--mut);margin-bottom:8px}
 .tmr .bigbtn{width:100%;padding:16px;font-size:17px;border-radius:12px}
 .tmr .dneg{color:var(--goodtxt)}.tmr .dpos{color:var(--crit)}
+.tr2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.trc{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card)}
+.trc .k{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.trc .v{font-size:18px;font-weight:700}.trc .v .u{font-size:11px;font-weight:400;color:var(--mut)}
+.trc .dd{font-size:11px;color:var(--mut)}
+.trc svg{width:100%;height:36px;display:block;margin-top:4px;color:var(--acc)}
 </style>
 </head>
 <body>
@@ -267,8 +273,37 @@ function renderAnaliza(){
   h+="</div>";
   h+="<h2>Reguły reakcji — status na dziś</h2><div class=\"card\">";
   h+=BOOT.analiza.rules.map(function(r){return "<div class=\"rule\"><span class=\"dot "+r.st+"\"></span><div><span class=\"rn\">"+esc(r.name)+"</span><br><span class=\"rx\">"+esc(r.txt)+"</span></div></div>";}).join("")+"</div>";
+  // #9 trendy zdrowia (wymaga boot.trendy z v9 — na v8 sekcja się nie renderuje)
+  if(BOOT.trendy&&BOOT.trendy.length){
+    var cut=day(BOOT.today)-TDAYS;
+    var tr=BOOT.trendy.filter(function(t){return day(t.d)>=cut;});
+    h+="<h2>Trendy zdrowia</h2><div class=\"filters\"><span class=\"fbtn"+(TDAYS===30?" on":"")+"\" onclick=\"setTd(30)\">30 dni</span><span class=\"fbtn"+(TDAYS===90?" on":"")+"\" onclick=\"setTd(90)\">90 dni</span></div>";
+    h+="<div class=\"tr2\">"+trendCard("RHR","",tr.map(function(t){return t.rhr;}),0)+trendCard("HRV","ms",tr.map(function(t){return t.hrv;}),0)+trendCard("Sen","h",tr.map(function(t){return t.sen;}),1)+trendCard("Waga","kg",tr.map(function(t){return t.waga;}),1)+"</div>";
+  }
+  // #38 sygnały / kontuzje (boot.sygnaly z v9)
+  if(BOOT.sygnaly){
+    h+="<h2>Sygnały / kontuzje</h2>";
+    h+=BOOT.sygnaly.length?BOOT.sygnaly.map(function(s){return "<div class=\"note\"><div class=\"m\">"+esc(s.w)+"</div>"+esc(s.x)+"</div>";}).join(""):"<div class=\"sub\">brak sygnałów — czysto 🎉</div>";
+  }
   $("v-analiza").innerHTML=h;
   if(BOOT.analiza.volume.length)bars($("volbars"),BOOT.analiza.volume);
+}
+var TDAYS=30;
+function setTd(n){TDAYS=n;renderAnaliza();}
+function spark(vals){
+  var pts=[];vals.forEach(function(v,i){if(v!=null)pts.push([i,v]);});
+  if(pts.length<2)return "<div class=\"dd\">za mało danych</div>";
+  var ys=pts.map(function(p){return p[1];}),mn=Math.min.apply(null,ys),mx=Math.max.apply(null,ys),sp=(mx-mn)||1;
+  var n=vals.length-1||1;
+  var poly=pts.map(function(p){return (p[0]/n*100).toFixed(1)+","+(32-((p[1]-mn)/sp*28+2)).toFixed(1);}).join(" ");
+  return "<svg viewBox=\"0 0 100 36\" preserveAspectRatio=\"none\"><polyline points=\""+poly+"\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" vector-effect=\"non-scaling-stroke\"/></svg>";
+}
+function trendCard(label,unit,vals,dec){
+  var nn=vals.filter(function(v){return v!=null;});
+  if(!nn.length)return "<div class=\"trc\"><div class=\"k\">"+label+"</div><div class=\"dd\">brak danych</div></div>";
+  var last=nn[nn.length-1],avg=nn.reduce(function(a,b){return a+b;},0)/nn.length;
+  var d=last-avg,ds=(d>=0?"+":"−")+Math.abs(d).toFixed(1);
+  return "<div class=\"trc\"><div class=\"k\">"+label+"</div><div class=\"v\">"+last.toFixed(dec)+(unit?" <span class=\"u\">"+unit+"</span>":"")+"</div><div class=\"dd\">śr. "+avg.toFixed(1)+" · "+ds+" vs śr. · n="+nn.length+"</div>"+spark(vals)+"</div>";
 }
 function renderDziennik(){
   var types=[["","Wszystko"],["Bieg","Bieg"],["Siła","Siła"],["Box","Box"],["Mixed","Mixed"],["Symulacja","Symulacja"]];
