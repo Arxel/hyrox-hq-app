@@ -220,6 +220,8 @@ var DBLST=[
 {k:"wb",n:"Wall Balls",spec:"100 powt. · 6 kg · 3,0/2,7 m",split:55,t:"3:20"}];
 var DBL={pace:"4:12",rox:"2:30",s:{},t:{}};
 try{var _d=JSON.parse(localStorage.getItem("hx_dbl")||"null");if(_d&&_d.s)DBL=_d;}catch(e){}
+// #12 e1RM — serie do zapisu (pend) + wybrany bój trendu
+var LIFT={pend:[]},LSEL=0;
 // #27 Strona startu — starty sezonu + timeline z playbooka (offsety w min od startu) + checklisty
 var RACES={mix:{n:"Hyrox Mix",d:"2026-10-15",cel:"sub-60"},solo:{n:"Hyrox Solo",d:"2026-11-20",cel:"sub-70 (A-cel)"}};
 var STL=[[-195,"Pobudka (3+ h przed)"],[-180,"Śniadanie — znane, węglowodanowe"],[-90,"Na miejscu / odbiór pakietu"],[-40,"Kofeina (~250–330 mg, dawka przetestowana)"],[-35,"Rozgrzewka: trucht → mobilność → przebieżki → WB/erg"],[-10,"Strefa startowa — sekwencja w głowie"],[0,"START"]];
@@ -239,6 +241,7 @@ function post(body,cb){
 var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
   apiQuickLog:function(a){return Object.assign({app:"quicklog"},a);},
   apiNote:function(a){return{app:"note",text:a};},
+  apiLift:function(a){return{app:"lift",rows:a};},
   apiMorning:function(a){return Object.assign({app:"morning"},a);},
   apiFuel:function(a){return Object.assign({app:"fuel"},a);}};
 function run(fn,arg,cb){post(OPS[fn](arg),cb);}
@@ -367,7 +370,7 @@ function round25(x){return Math.round(x/2.5)*2.5;}
 function vdotFrom(distM,tSec){var tmin=tSec/60,v=distM/tmin;var vo2=-4.60+0.182258*v+0.000104*v*v;var pct=0.8+0.1894393*Math.exp(-0.012778*tmin)+0.2989558*Math.exp(-0.1932605*tmin);return vo2/pct;}
 function velFromPct(vdot,pct){var vo2=vdot*pct,a=0.000104,b=0.182258,c=-(4.60+vo2);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);} // m/min
 var TSEC="timer";
-var TSECS=[["timer","⏱ Timer"],["kalk","Kalkulatory"],["race","Predictor"],["stacje","Stacje"],["dbl","Doubles"],["start","🏁 Start"],["playbook","Playbook"],["pb","PB"]];
+var TSECS=[["timer","⏱ Timer"],["kalk","Kalkulatory"],["e1rm","e1RM"],["race","Predictor"],["stacje","Stacje"],["dbl","Doubles"],["start","🏁 Start"],["playbook","Playbook"],["pb","PB"]];
 function setTsec(k){TSEC=k;renderTools();window.scrollTo(0,0);}
 function renderTools(){
   var h="<div class=\"filters\">"+TSECS.map(function(s){return "<span class=\"fbtn"+(TSEC===s[0]?" on":"")+"\" onclick=\"setTsec('"+s[0]+"')\">"+s[1]+"</span>";}).join("")+"</div>";
@@ -387,6 +390,24 @@ function renderTools(){
   h+="<div id=\"p-res\"></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>110–129</td></tr><tr><td>Z2 easy/long</td><td>130–144</td></tr><tr><td>Z3 tempo</td><td>145–154</td></tr><tr><td>Z4 próg</td><td>155–161</td></tr><tr><td>Z5 VO2</td><td>162+</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LTHR 167 · max ~182 · RHR baza 41–44</div></div>";
+  }
+  if(TSEC==="e1rm"){
+  // --- #12 e1RM: log serii (każda seria = wiersz w zakładce Siła) + trend Epley ---
+  h+="<h2>e1RM — tracker siły</h2>";
+  h+="<div class=\"card\"><div class=\"ct\">Nowe serie <span class=\"sub\">(dzisiejsza sesja — każda seria osobno)</span></div>";
+  h+="<div class=\"rc\"><label>Bój</label><select id=\"l-lift\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\""+(i===LSEL?" selected":"")+">"+esc(m.n)+"</option>";}).join("")+"</select>";
+  h+="<label>Ciężar (kg)</label><input id=\"l-kg\" type=\"number\" step=\"2.5\">";
+  h+="<label>Powtórzenia</label><input id=\"l-r\" type=\"number\" min=\"1\" max=\"15\">";
+  h+="<label>RPE (opcjonalnie)</label><input id=\"l-rpe\" type=\"number\" min=\"5\" max=\"10\" step=\"0.5\"></div>";
+  h+="<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"e1Add()\">+ dodaj serię</button></div>";
+  if(LIFT.pend.length){
+    h+="<div style=\"margin-top:8px\">"+LIFT.pend.map(function(p,i){return "<div class=\"chkr\">"+esc(p[1])+": <b>"+p[2]+" kg × "+p[3]+"</b>"+(p[4]?" @RPE "+p[4]:"")+" <span class=\"sub\">e1RM "+e1Of(p[2],p[3])+"</span><span style=\"margin-left:auto;color:var(--mut);cursor:pointer\" onclick=\"e1Del("+i+")\">✕</span></div>";}).join("");
+    h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"e1Save()\">Zapisz "+LIFT.pend.length+" ser. → arkusz</button></div></div>";
+  }
+  h+="</div>";
+  h+="<div class=\"card\"><div class=\"ct\">Trend <span class=\"sub\">(e1RM Epley = kg × (1 + powt/30) · najlepsza seria dnia)</span></div>";
+  h+="<div class=\"rc\"><label>Bój</label><select id=\"l-tsel\" oninput=\"LSEL=parseInt(this.value,10);renderTools()\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\""+(i===LSEL?" selected":"")+">"+esc(m.n)+"</option>";}).join("")+"</select></div>";
+  h+="<div id=\"l-trend\">"+e1Trend()+"</div></div>";
   }
   if(TSEC==="race"){
   // --- Race predictor ---
@@ -485,6 +506,36 @@ function dblSend(){
   var L=["Plan doubles Mix 15.10 (szkic z apki):","Bieg razem "+DBL.pace+"/km · roxzone "+DBL.rox];
   DBLST.forEach(function(s){L.push(s.n+": ja "+(DBL.s[s.k]!=null?DBL.s[s.k]:s.split)+"% / partnerka "+(100-(DBL.s[s.k]!=null?DBL.s[s.k]:s.split))+"% · cel "+(DBL.t[s.k]||s.t));});
   run("apiNote",L.join("\n"),function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:L.join("\n"),s:"nowa"});toast("Plan w Inboxie — Claude przetworzy");});
+}
+// ---------- #12 e1RM ----------
+function e1Of(kg,r){kg=parseFloat(kg);r=parseInt(r,10);if(!kg||!r)return "—";return Math.round(r===1?kg:kg*(1+r/30));}
+function e1Add(){
+  var i=parseInt($("l-lift").value,10),kg=$("l-kg").value,r=$("l-r").value,rpe=$("l-rpe").value;
+  if(!parseFloat(kg)||!parseInt(r,10)){toast("Podaj kg i powtórzenia");return;}
+  LSEL=i;LIFT.pend.push([BOOT.today,MAKSY[i].n,parseFloat(kg),parseInt(r,10),rpe||"","apka"]);renderTools();
+}
+function e1Del(i){LIFT.pend.splice(i,1);renderTools();}
+function e1Save(){
+  var rows=LIFT.pend.slice();
+  run("apiLift",rows,function(){
+    if(!BOOT.sila)BOOT.sila=[];
+    rows.forEach(function(p){BOOT.sila.push({d:p[0],b:p[1],kg:p[2],r:p[3],rpe:p[4]});});
+    LIFT.pend=[];renderTools();toast(rows.length+" ser. w arkuszu (Siła)");
+  });
+}
+function e1Trend(){
+  if(!BOOT.sila)return "<div class=\"sub\">Historia pojawi się po wdrożeniu backendu v11 (zakładka Siła w arkuszu).</div>";
+  var m=MAKSY[LSEL],rows=BOOT.sila.filter(function(x){return x.b===m.n&&x.kg&&x.r;});
+  if(!rows.length)return "<div class=\"sub\">Brak wpisów dla: "+esc(m.n)+". Dodaj serie powyżej — trend zbuduje się sam.</div>";
+  var byDay={},order=[];
+  rows.forEach(function(x){var e=x.r===1?x.kg:x.kg*(1+x.r/30);if(!(x.d in byDay)){byDay[x.d]={e:0,kg:0,r:0};order.push(x.d);}if(e>byDay[x.d].e)byDay[x.d]={e:e,kg:x.kg,r:x.r};});
+  var vals=order.map(function(d){return byDay[d].e;});
+  var best=Math.max.apply(null,vals),last=byDay[order[order.length-1]];
+  var h="<div class=\"res\">"+Math.round(last.e)+" <span class=\"u\">kg e1RM (ost. sesja: "+last.kg+"×"+last.r+")</span></div>";
+  h+="<div class=\"sub\">best "+Math.round(best)+" kg · potwierdzony 1RM "+m.x+" ("+Math.round(last.e/m.x*100)+"%) · szac. "+m.y+" ("+Math.round(last.e/m.y*100)+"%) · sesji: "+order.length+"</div>";
+  if(vals.length>1)h+="<div class=\"trc\" style=\"margin-top:8px\">"+spark(vals)+"</div>";
+  h+="<table class=\"ptable\" style=\"margin-top:8px\">"+order.slice(-8).reverse().map(function(d){var s=byDay[d];return "<tr><td style=\"text-align:left\">"+esc(d)+"</td><td>"+s.kg+"×"+s.r+"</td><td><b>"+Math.round(s.e)+"</b></td></tr>";}).join("")+"</table>";
+  return h;
 }
 // ---------- #27 Strona startu ----------
 function startSave(){try{localStorage.setItem("hx_start",JSON.stringify(START));}catch(e){}}
