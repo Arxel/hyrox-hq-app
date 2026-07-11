@@ -105,6 +105,25 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 .rtot{display:flex;align-items:baseline;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .rtot .big{font-size:30px;font-weight:700}
 .rtot .big.l0{color:var(--goodtxt)}.rtot .big.l1{color:var(--warn)}.rtot .big.l2{color:var(--crit)}
+.stn{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card);overflow:hidden}
+.stn-h{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}
+.stn-h .nm{font-weight:650;font-size:14px}.stn-h .sp{font-size:11px;color:var(--mut)}
+.stn-h .tm{margin-left:auto;text-align:right;font-size:12px;color:var(--mut);white-space:nowrap}
+.stn-h .tm b{color:var(--acc);font-size:14px}
+.stn-b{display:none;padding:0 12px 11px;font-size:13px}
+.stn.open .stn-b{display:block}
+.stn-b .row3{display:flex;gap:6px;margin-bottom:8px}
+.stn-b .row3 .c{flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 8px;text-align:center}
+.stn-b .row3 .k{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.stn-b .row3 .v{font-weight:700;font-size:15px}
+.stn-b .tip{margin:0 0 6px;color:var(--ink)}
+.stn-b ul{margin:4px 0 0;padding-left:18px;color:var(--mut)}
+.stn-b ul li{margin-bottom:3px}
+.badge{display:inline-block;width:auto;font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;vertical-align:1px}
+.badge.lev{background:var(--critbg);color:var(--crit)}
+.badge.hold{background:var(--goodbg);color:var(--goodtxt)}
+.seq{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;font-weight:600;color:var(--ink)}
+.seq .ar{color:var(--mut);font-weight:400}
 </style>
 </head>
 <body>
@@ -138,6 +157,21 @@ var FILTER="";
 var MAKSY=[{n:"Bench press",x:100,y:110},{n:"Back squat",x:130,y:140},{n:"Martwy ciąg",x:170,y:180},{n:"Strict press",x:60,y:65},{n:"Push press",x:70,y:70},{n:"Front squat",x:110,y:110},{n:"Clean",x:80,y:80},{n:"Snatch",x:58,y:58},{n:"Clean & Jerk",x:55,y:55},{n:"Thruster",x:47,y:50}];
 // Race predictor — składowe (teraz = split z 04.2026 / plan; cel = tempa docelowe sub-70)
 var RCOMP=[{k:"run",n:"Bieg 8×1 km (tempo /km)",teraz:"4:50",cel:"4:40",run:true},{k:"ski",n:"SkiErg",teraz:"4:17",cel:"4:10"},{k:"push",n:"Sled Push",teraz:"2:28",cel:"2:30"},{k:"pull",n:"Sled Pull",teraz:"4:22",cel:"3:45"},{k:"burpee",n:"Burpee BJ",teraz:"5:07",cel:"4:25"},{k:"row",n:"Row",teraz:"4:34",cel:"4:30"},{k:"farmers",n:"Farmers Carry",teraz:"1:29",cel:"1:30"},{k:"lunges",n:"Lunges",teraz:"4:09",cel:"4:00"},{k:"wb",n:"Wall Balls",teraz:"5:36",cel:"5:00"},{k:"rox",n:"Roxzone (przejścia)",teraz:"4:50",cel:"4:15"}];
+// #13+#24 Stacje — czasy (Warszawa 04.2026 / mediana kohorty sub-70 AG 30-34 / cel) + taktyka i drille z plan-sezon.md
+// lev: 1 = dźwignia (rezerwa czasu), 0 = utrzymanie (przy/nad medianą)
+var STACJE=[
+{n:"SkiErg",spec:"1000 m",teraz:"4:17",med:"4:11",cel:"~4:10",lev:0,tip:"Równo, nie bohatersko — to dopiero początek wyścigu.",dr:["Kilka pociągnięć erga w rozgrzewce startowej","Utrzymanie — jesteś przy medianie, nie inwestuj tu czasu treningowego"]},
+{n:"Sled Push",spec:"50 m · 152 kg",teraz:"2:28",med:"2:30",cel:"~2:30",lev:0,tip:"Twoja mocna — pewnie, bez przepalania nóg.",dr:["Sanki push w bloku siły wytrzymałościowej (F3) — podtrzymanie","Nie ruszamy: już na medianie kohorty"]},
+{n:"Sled Pull",spec:"50 m · 103 kg",teraz:"4:22",med:"3:31",cel:"~3:45",lev:1,tip:"NAJWIĘKSZA niedoceniona dźwignia (~37–40 s) — rytm liny, praca nogami+biodrem, nie samymi rękami. 4:22 jest wolniejsze niż najsłabszy wynik kohorty (4:10).",dr:["Skill snack 1–2×/tydz.: sled pull technicznie — rytm liny, nogi+biodra (10–15 min po sile/easy runie)","Siła ciągnięcia (akcesoria F2): ciężkie wiosłowanie, podciąganie z obciążeniem, sanki w tył","F3: compromised intervals z priorytetem Pull","Odcinek kontrolny w mini-benchmarku ~10–14.08"]},
+{n:"Burpee Broad Jump",spec:"80 m",teraz:"5:07",med:"4:15",cel:"~4:25",lev:1,tip:"Stałe tempo od pierwszego powtórzenia, bez zrywów — kohorta robi to ciągłym rytmem bez pauz.",dr:["Skill snack: BBJ 10–15 powt. równym tempem bez pauz","Techniczne BBJ w sesjach mixed już w F2 (tempo ciągłe)","BBJ 20 powt. na czas w mini-benchmarku ~10–14.08","Stretch 4:20 daje zapas w planie sub-70"]},
+{n:"Row",spec:"1000 m",teraz:"4:34",med:"4:33",cel:"~4:30",lev:0,tip:"Celowo zachowawczo — to okno na żel/płyny i kontrolę oddechu, nie rezerwa czasu.",dr:["Jedyna stacja z „wolnymi” rękami rytmicznie — tu wchodzi żel (~30–60 g węgli/h)","Utrzymanie — mediana kohorty równa Twojemu czasowi"]},
+{n:"Farmers Carry",spec:"200 m · 2×24 kg",teraz:"1:29",med:"1:40",cel:"~1:30",lev:0,tip:"Top kohorty — bez odkładania, przejść pewnie.",dr:["Tylko podtrzymanie chwytu — już top kohorty, nie inwestuj więcej"]},
+{n:"Sandbag Lunges",spec:"100 m · 20 kg",teraz:"4:09",med:"3:47",cel:"~4:00–4:10",lev:0,tip:"Technika = zero ryzyka no-repów (w Warszawie kara 180 s właśnie tu — wyświetlane 7:09 zawierało karę).",dr:["Loaded lunges w bloku siły wytrzymałościowej (F3)","Czyste kolano do maty co powtórzenie — kara kosztuje więcej niż wolniejsze przejście"]},
+{n:"Wall Balls",spec:"100 powt. · 6 kg / 3 m",teraz:"5:36",med:"4:58",cel:"sub-5:00",lev:1,tip:"Rozbicie z góry: zaplanowane serie (np. 20/15/15/…) > walka do odcięcia. Stretch 4:45.",dr:["Skill snack: serie po 15–20 w rytmie startowym","Objętość WB w bloku siły wytrzymałościowej (F3)","Max seria unbroken w mini-benchmarku ~10–14.08","To tu spłacasz dług tlenowy za zbyt szybki 1. km — pacing biegu chroni WB"]},
+{n:"Roxzone",spec:"8 przejść",teraz:"~4:50",med:"4:20 (min 4:03)",cel:"~4:15",lev:1,tip:"Wchodzisz i wychodzisz TRUCHTEM, zawsze. Żadnego stania — odpoczynek to następny bieg w kontrolowanym tempie.",dr:["Trenowany jak stacja: w symulacjach ćwicz przejścia „w biegu”","Nikt z kohorty sub-70 w Warszawie nie zszedł pod 4:00 — 3:30 to poziom podium open","Realny zysk ~35–40 s dyscypliny, nie 80 s"]},
+{n:"Bieg",spec:"8×1 km",teraz:"37:05",med:"36:07",cel:"~35:45",lev:1,tip:"Pierwszy km CELOWO 10–15 s wolniej (~4:50–4:55 przy celu 4:40). Euforia na starcie = dług tlenowy spłacany na wall balls. Negative split wygrywa w Hyroxie.",dr:["Konsekwencja tempa środkowych km (kohorta biega 4:45–4:55)","F3: compromised intervals 1 km @ tempo docelowe + stacja ×4–6","Marker F3: compromised 4:40/km to bufor, nie warunek"]}];
+// #36 Baza PB — starty + bieg + maksy (maksy-silowe.md, 2026-07-06)
+var PBS={starty:[{n:"Hyrox Poznań 2025",v:"1:19:44"},{n:"Hyrox Warszawa 04.2026",v:"1:13:59",x:"czysto · oficjalnie z karą 180 s (lunges) · #201 AG 30-34, #802/2560"}],bieg:[{n:"5 km (świeże)",v:"~21:25",x:"4:17/km"}],cele:[{n:"Hyrox Mix 15.10.2026",v:"sub-60"},{n:"Hyrox Solo 20.11.2026",v:"sub-70",x:"A-cel sezonu"}]};
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function $(id){return document.getElementById(id);}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
@@ -252,9 +286,24 @@ function renderTools(){
   h+="<h2>Race predictor — Hyrox Solo</h2><div class=\"card\"><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"fillR('teraz')\">teraz</button><button class=\"btn sm\" onclick=\"fillR('cel')\">cel (sub-70)</button></div><div class=\"rc\">";
   h+=RCOMP.map(function(c){return "<label>"+esc(c.n)+"</label><input id=\"r-"+c.k+"\" value=\""+c.teraz+"\" oninput=\"calcR()\">";}).join("");
   h+="</div><div id=\"r-res\"></div><div class=\"sub\" style=\"margin-top:8px\">Model orientacyjny (suma splitów) — nie prognoza gwarantowana. Bieg = tempo/km ×8.</div></div>";
+  // --- Stacje: czasy + technika + drille ---
+  h+="<h2>Stacje — czasy, technika, drille</h2>";
+  h+="<div class=\"card\"><div class=\"seq\">"+["Ski","Push","Pull","Burpee","Row","Farmers","Lunges","WB"].map(function(s){return "<span>"+s+"</span>";}).join("<span class=\"ar\">→</span>")+"</div><div class=\"sub\" style=\"margin-top:6px\">Sekwencja na blachę — recytujesz ją na rozgrzewce. Czasy: Warszawa 04.2026 · mediana kohorty sub-70 (AG 30-34) · cel.</div></div>";
+  h+=STACJE.map(function(s,i){
+    var badge=s.lev?"<span class=\"badge lev\">dźwignia</span>":"<span class=\"badge hold\">utrzymanie</span>";
+    return "<div class=\"stn\" id=\"stn-"+i+"\"><div class=\"stn-h\" onclick=\"tgS("+i+")\"><div><div class=\"nm\">"+esc(s.n)+" "+badge+"</div><div class=\"sp\">"+esc(s.spec)+"</div></div><div class=\"tm\">teraz <b>"+esc(s.teraz)+"</b><br>cel "+esc(s.cel)+"</div></div>"+
+      "<div class=\"stn-b\"><div class=\"row3\"><div class=\"c\"><div class=\"k\">teraz</div><div class=\"v\">"+esc(s.teraz)+"</div></div><div class=\"c\"><div class=\"k\">mediana</div><div class=\"v\">"+esc(s.med)+"</div></div><div class=\"c\"><div class=\"k\">cel</div><div class=\"v\">"+esc(s.cel)+"</div></div></div>"+
+      "<p class=\"tip\">"+esc(s.tip)+"</p><ul>"+s.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
+  }).join("");
+  // --- Baza PB ---
+  h+="<h2>Baza PB</h2><div class=\"card\"><div class=\"ct\">Starty</div><table class=\"ptable\">"+PBS.starty.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?"<br><span class=\"sub\">"+esc(p.x)+"</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
+  h+="<div class=\"ct\" style=\"margin-top:12px\">Bieg</div><table class=\"ptable\">"+PBS.bieg.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
+  h+="<div class=\"ct\" style=\"margin-top:12px\">Maksy siłowe <span class=\"sub\">(2026-07-06 · potwierdzony / szac.)</span></div><table class=\"ptable\">"+MAKSY.map(function(m){return "<tr><td>"+esc(m.n)+"</td><td><b>"+m.x+"</b>"+(m.y>m.x?" <span class=\"sub\">/ "+m.y+"</span>":"")+"</td></tr>";}).join("")+"</table>";
+  h+="<div class=\"ct\" style=\"margin-top:12px\">Cele sezonu</div><table class=\"ptable\">"+PBS.cele.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table></div>";
   $("v-tools").innerHTML=h;
   calcW();calcP();calcC('p');fillR('teraz');
 }
+function tgS(i){$("stn-"+i).classList.toggle("open");}
 function calcW(){var m=MAKSY[+$("w-lift").value],pct=parseFloat($("w-pct").value),base=$("w-base").value,rm=base==="y"?m.y:m.x;var res=$("w-res");if(isNaN(pct)||pct<=0){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj %</div>";return;}var kg=round25(rm*pct/100);var note=(base==="x"&&m.y>m.x)?" <span class=\"sub\">(szac. sufit "+m.y+")</span>":"";var tbl="<table class=\"ptable\"><tr><th>%</th><th>kg</th></tr>"+[60,65,70,75,80,85,90,95].map(function(p){return "<tr><td>"+p+"%</td><td>"+round25(rm*p/100)+"</td></tr>";}).join("")+"</table>";res.innerHTML="<div class=\"res\">"+kg+" kg <span class=\"u\">= "+pct+"% z "+rm+" kg"+note+"</span></div>"+tbl;}
 function calcP(){var dist=+$("p-dist").value,t=parseMS($("p-time").value),res=$("p-res");if(t==null){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj czas mm:ss</div>";return;}var vd=vdotFrom(dist,t);var zones=[["E — easy/long",0.70],["M — maraton/tempo ciągłe",0.84],["T — próg",0.88],["I — interwały VO2",0.975],["R — reps/szybkość",1.05]];var rows=zones.map(function(z){var v=velFromPct(vd,z[1]),pace=1000/v,ms=v/60;return "<tr><td>"+z[0]+"</td><td>"+fmtMS(pace*60)+"</td><td>"+ms.toFixed(2)+"</td></tr>";}).join("");res.innerHTML="<div class=\"res\">VDOT "+vd.toFixed(1)+"</div><table class=\"ptable\"><tr><th>Intensywność</th><th>/km</th><th>m/s</th></tr>"+rows+"</table>";}
 function calcC(from){var pe=$("c-pace"),me=$("c-ms");if(from==='p'){var s=parseMS(pe.value);if(s==null||s<=0)return;me.value=(1000/s).toFixed(2);}else{var v=parseFloat(String(me.value).replace(',','.'));if(isNaN(v)||v<=0)return;pe.value=fmtMS(1000/v);}}
