@@ -87,6 +87,24 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 .note{border-left:3px solid var(--line);padding:4px 10px;margin-bottom:8px;font-size:13px}
 .note .m{color:var(--mut);font-size:11px}.note.nowa{border-left-color:var(--acc)}
 .splash{padding:40px 10px;text-align:center;color:var(--mut)}
+.tab{padding-left:0;padding-right:0}
+.res{font-size:24px;font-weight:700;color:var(--acc);margin-top:8px}
+.res .u{font-size:13px;color:var(--mut);font-weight:400}
+.ptable{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.ptable td,.ptable th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}
+.ptable th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.ptable th:first-child,.ptable td:first-child{text-align:left}
+.ptable td:first-child{color:var(--mut)}
+.ptable tr:last-child td{border-bottom:0}
+.ct{font-size:14px;font-weight:650;margin-bottom:2px}
+#v-tools select,#v-tools input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+#v-tools label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+.rc{display:grid;grid-template-columns:1fr 84px;gap:5px 8px;align-items:center;margin-top:8px}
+#v-tools .rc label{font-size:13px;color:var(--ink);margin:0}
+#v-tools .rc input{padding:6px 8px;border-radius:7px;text-align:center}
+.rtot{display:flex;align-items:baseline;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.rtot .big{font-size:30px;font-weight:700}
+.rtot .big.l0{color:var(--goodtxt)}.rtot .big.l1{color:var(--warn)}.rtot .big.l2{color:var(--crit)}
 </style>
 </head>
 <body>
@@ -97,12 +115,14 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 <div id="v-analiza" class="view"></div>
 <div id="v-dziennik" class="view"></div>
 <div id="v-note" class="view"></div>
+<div id="v-tools" class="view"></div>
 <div class="tabs">
   <div class="tab on" data-v="dzis">Dziś</div>
   <div class="tab" data-v="tydz">Tydzień</div>
   <div class="tab" data-v="analiza">Analiza</div>
   <div class="tab" data-v="dziennik">Dziennik</div>
   <div class="tab" data-v="note">Notatki</div>
+  <div class="tab" data-v="tools">Narzędzia</div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -114,6 +134,10 @@ var BOOT=null;
 var FAZY=[{n:"Rozbieg",od:"2026-06-30",do_:"2026-07-05"},{n:"Budowa",od:"2026-07-06",do_:"2026-08-16"},{n:"Specyficzna",od:"2026-08-17",do_:"2026-09-28"},{n:"Szczyt/Mix",od:"2026-09-29",do_:"2026-10-15"},{n:"Re-sharpen",od:"2026-10-16",do_:"2026-11-20"}];
 var LEV=[{n:"Sled Pull",nowS:262,celS:225,medS:211,now:"4:22",cel:"3:45",g:"−37 s"},{n:"Burpees",nowS:307,celS:265,medS:255,now:"5:07",cel:"4:25",g:"−42 s"},{n:"Wall Balls",nowS:336,celS:300,medS:298,now:"5:36",cel:"5:00",g:"−36 s"},{n:"Roxzone",nowS:290,celS:255,medS:260,now:"~4:50",cel:"4:15",g:"−35 s"},{n:"Bieg 8 km",nowS:2225,celS:2145,medS:2167,now:"37:05",cel:"35:45",g:"−80 s"}];
 var FILTER="";
+// Kalkulator ciężarów — maksy z maksy-silowe.md (x=potwierdzony 1RM, y=szac. aktualny)
+var MAKSY=[{n:"Bench press",x:100,y:110},{n:"Back squat",x:130,y:140},{n:"Martwy ciąg",x:170,y:180},{n:"Strict press",x:60,y:65},{n:"Push press",x:70,y:70},{n:"Front squat",x:110,y:110},{n:"Clean",x:80,y:80},{n:"Snatch",x:58,y:58},{n:"Clean & Jerk",x:55,y:55},{n:"Thruster",x:47,y:50}];
+// Race predictor — składowe (teraz = split z 04.2026 / plan; cel = tempa docelowe sub-70)
+var RCOMP=[{k:"run",n:"Bieg 8×1 km (tempo /km)",teraz:"4:50",cel:"4:40",run:true},{k:"ski",n:"SkiErg",teraz:"4:17",cel:"4:10"},{k:"push",n:"Sled Push",teraz:"2:28",cel:"2:30"},{k:"pull",n:"Sled Pull",teraz:"4:22",cel:"3:45"},{k:"burpee",n:"Burpee BJ",teraz:"5:07",cel:"4:25"},{k:"row",n:"Row",teraz:"4:34",cel:"4:30"},{k:"farmers",n:"Farmers Carry",teraz:"1:29",cel:"1:30"},{k:"lunges",n:"Lunges",teraz:"4:09",cel:"4:00"},{k:"wb",n:"Wall Balls",teraz:"5:36",cel:"5:00"},{k:"rox",n:"Roxzone (przejścia)",teraz:"4:50",cel:"4:15"}];
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function $(id){return document.getElementById(id);}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
@@ -202,7 +226,41 @@ function renderDziennik(){
   $("v-dziennik").innerHTML=h;
 }
 function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote()\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
-function renderAll(){$("stan").textContent="stan na "+BOOT.today;renderDzis();renderTydz();renderAnaliza();renderDziennik();renderNote();}
+// ---------- Narzędzia (klienckie kalkulatory) ----------
+function pad2(n){return (n<10?"0":"")+n;}
+function parseMS(s){var p=String(s||"").trim().split(":");if(p.length!==2)return null;var m=parseInt(p[0],10),sec=parseInt(p[1],10);if(isNaN(m)||isNaN(sec))return null;return m*60+sec;}
+function fmtMS(sec){sec=Math.round(sec);return Math.floor(sec/60)+":"+pad2(sec%60);}
+function fmtHMS(sec){sec=Math.round(sec);if(sec<3600)return Math.floor(sec/60)+":"+pad2(sec%60);var h=Math.floor(sec/3600);return h+":"+pad2(Math.floor(sec%3600/60))+":"+pad2(sec%60);}
+function round25(x){return Math.round(x/2.5)*2.5;}
+// VDOT (Daniels): VDOT z testu + tempa treningowe
+function vdotFrom(distM,tSec){var tmin=tSec/60,v=distM/tmin;var vo2=-4.60+0.182258*v+0.000104*v*v;var pct=0.8+0.1894393*Math.exp(-0.012778*tmin)+0.2989558*Math.exp(-0.1932605*tmin);return vo2/pct;}
+function velFromPct(vdot,pct){var vo2=vdot*pct,a=0.000104,b=0.182258,c=-(4.60+vo2);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);} // m/min
+function renderTools(){
+  var h="";
+  // --- Kalkulator ciężarów ---
+  h+="<h2>Kalkulator ciężarów (% z maksów)</h2><div class=\"card\">";
+  h+="<label>Bój</label><select id=\"w-lift\" oninput=\"calcW()\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\">"+esc(m.n)+"</option>";}).join("")+"</select>";
+  h+="<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px\"><div><label>%</label><input id=\"w-pct\" type=\"number\" value=\"75\" oninput=\"calcW()\"></div><div><label>Baza 1RM</label><select id=\"w-base\" oninput=\"calcW()\"><option value=\"x\">potwierdzony</option><option value=\"y\">szacowany</option></select></div></div>";
+  h+="<div id=\"w-res\"></div></div>";
+  // --- Tempa / VDOT ---
+  h+="<h2>Tempa i strefy (VDOT)</h2><div class=\"card\">";
+  h+="<div class=\"ct\">Test biegowy → tempa treningowe</div><div class=\"grid2\"><div><label>Dystans</label><select id=\"p-dist\" oninput=\"calcP()\"><option value=\"3000\">3 km</option><option value=\"5000\" selected>5 km</option><option value=\"8000\">8 km</option><option value=\"10000\">10 km</option></select></div><div><label>Czas mm:ss</label><input id=\"p-time\" value=\"21:25\" oninput=\"calcP()\"></div><div></div></div>";
+  h+="<div id=\"p-res\"></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>110–129</td></tr><tr><td>Z2 easy/long</td><td>130–144</td></tr><tr><td>Z3 tempo</td><td>145–154</td></tr><tr><td>Z4 próg</td><td>155–161</td></tr><tr><td>Z5 VO2</td><td>162+</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LTHR 167 · max ~182 · RHR baza 41–44</div></div>";
+  // --- Race predictor ---
+  h+="<h2>Race predictor — Hyrox Solo</h2><div class=\"card\"><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"fillR('teraz')\">teraz</button><button class=\"btn sm\" onclick=\"fillR('cel')\">cel (sub-70)</button></div><div class=\"rc\">";
+  h+=RCOMP.map(function(c){return "<label>"+esc(c.n)+"</label><input id=\"r-"+c.k+"\" value=\""+c.teraz+"\" oninput=\"calcR()\">";}).join("");
+  h+="</div><div id=\"r-res\"></div><div class=\"sub\" style=\"margin-top:8px\">Model orientacyjny (suma splitów) — nie prognoza gwarantowana. Bieg = tempo/km ×8.</div></div>";
+  $("v-tools").innerHTML=h;
+  calcW();calcP();calcC('p');fillR('teraz');
+}
+function calcW(){var m=MAKSY[+$("w-lift").value],pct=parseFloat($("w-pct").value),base=$("w-base").value,rm=base==="y"?m.y:m.x;var res=$("w-res");if(isNaN(pct)||pct<=0){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj %</div>";return;}var kg=round25(rm*pct/100);var note=(base==="x"&&m.y>m.x)?" <span class=\"sub\">(szac. sufit "+m.y+")</span>":"";var tbl="<table class=\"ptable\"><tr><th>%</th><th>kg</th></tr>"+[60,65,70,75,80,85,90,95].map(function(p){return "<tr><td>"+p+"%</td><td>"+round25(rm*p/100)+"</td></tr>";}).join("")+"</table>";res.innerHTML="<div class=\"res\">"+kg+" kg <span class=\"u\">= "+pct+"% z "+rm+" kg"+note+"</span></div>"+tbl;}
+function calcP(){var dist=+$("p-dist").value,t=parseMS($("p-time").value),res=$("p-res");if(t==null){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj czas mm:ss</div>";return;}var vd=vdotFrom(dist,t);var zones=[["E — easy/long",0.70],["M — maraton/tempo ciągłe",0.84],["T — próg",0.88],["I — interwały VO2",0.975],["R — reps/szybkość",1.05]];var rows=zones.map(function(z){var v=velFromPct(vd,z[1]),pace=1000/v,ms=v/60;return "<tr><td>"+z[0]+"</td><td>"+fmtMS(pace*60)+"</td><td>"+ms.toFixed(2)+"</td></tr>";}).join("");res.innerHTML="<div class=\"res\">VDOT "+vd.toFixed(1)+"</div><table class=\"ptable\"><tr><th>Intensywność</th><th>/km</th><th>m/s</th></tr>"+rows+"</table>";}
+function calcC(from){var pe=$("c-pace"),me=$("c-ms");if(from==='p'){var s=parseMS(pe.value);if(s==null||s<=0)return;me.value=(1000/s).toFixed(2);}else{var v=parseFloat(String(me.value).replace(',','.'));if(isNaN(v)||v<=0)return;pe.value=fmtMS(1000/v);}}
+function fillR(preset){RCOMP.forEach(function(c){var el=$("r-"+c.k);if(el)el.value=c[preset];});calcR();}
+function calcR(){var run=parseMS($("r-run").value),bad=(run==null);var runSec=run==null?0:run*8,stSec=0;RCOMP.forEach(function(c){if(c.run)return;var s=parseMS($("r-"+c.k).value);if(s==null){bad=true;return;}stSec+=s;});var res=$("r-res");if(bad){res.innerHTML="<div class=\"rtot\"><span class=\"sub\">uzupełnij pola mm:ss</span></div>";return;}var tot=runSec+stSec,lvl=tot<4200?0:(tot<4439?1:2);var vsG=tot-4200,vsPB=tot-4439;function sg(x){return (x>0?"+":"")+fmtMS(Math.abs(x));}res.innerHTML="<div class=\"rtot\"><span class=\"big l"+lvl+"\">"+fmtHMS(tot)+"</span><span class=\"sub\">bieg "+fmtHMS(runSec)+" · stacje+rox "+fmtHMS(stSec)+"</span></div><table class=\"ptable\"><tr><td>vs cel Solo sub-70 (1:10:00)</td><td>"+sg(vsG)+"</td></tr><tr><td>vs PB czysto (1:13:59)</td><td>"+sg(vsPB)+"</td></tr></table>";}
+function renderAll(){$("stan").textContent="stan na "+BOOT.today;renderDzis();renderTydz();renderAnaliza();renderDziennik();renderNote();renderTools();}
 function tf(id){$(id).classList.toggle("open");}
 function setFilter(f){FILTER=f;renderDziennik();}
 function done(d){run("apiCheckDone",d,function(){BOOT.plan.forEach(function(p){if(p.d===d)p.st="✓";});BOOT.adh.weekDone++;renderAll();toast("Odhaczone ✓");});}
