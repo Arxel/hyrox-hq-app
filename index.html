@@ -285,6 +285,20 @@ function renderAnaliza(){
     h+="<h2>Sygnały / kontuzje</h2>";
     h+=BOOT.sygnaly.length?BOOT.sygnaly.map(function(s){return "<div class=\"note\"><div class=\"m\">"+esc(s.w)+"</div>"+esc(s.x)+"</div>";}).join(""):"<div class=\"sub\">brak sygnałów — czysto 🎉</div>";
   }
+  // #37 przebieg butów (boot.buty z v10 — zakładka Sprzęt, odświeżana z Garmina przy rollupie)
+  if(BOOT.buty&&BOOT.buty.length){
+    h+="<h2>Buty — przebieg (strażnik zużycia)</h2><div class=\"card\"><div class=\"lev\">";
+    h+=BOOT.buty.map(function(b){
+      if(b.km==null)return "";
+      var lim=b.lim,pct=lim?Math.min(100,b.km/lim*100):0;
+      var warn=lim&&b.km/lim>=0.85;
+      var bar=lim?"<div class=\"bar\"><div class=\"fill\" style=\"width:"+pct.toFixed(0)+"%"+(warn?";background:var(--crit)":"")+"\"></div></div>":"<div class=\"bar\"></div>";
+      var lbl=lim?("<b>"+b.km+"</b>/"+lim+" km"+(warn?" ⚠️":"")):("<b>"+b.km+"</b> km <span class=\"sub\">("+esc(b.typ||"bez limitu")+")</span>");
+      return "<div class=\"n\">"+esc(b.n)+"</div>"+bar+"<div style=\"font-size:12px\">"+lbl+"</div>";
+    }).join("");
+    var updB=BOOT.buty[0]&&BOOT.buty[0].upd;
+    h+="</div>"+(updB?"<div class=\"sub\" style=\"margin-top:6px\">z Garmina, stan: "+esc(updB)+" · ⚠️ = ≥85% limitu</div>":"")+"</div>";
+  }
   $("v-analiza").innerHTML=h;
   if(BOOT.analiza.volume.length)bars($("volbars"),BOOT.analiza.volume);
 }
