@@ -323,10 +323,16 @@ function round25(x){return Math.round(x/2.5)*2.5;}
 // VDOT (Daniels): VDOT z testu + tempa treningowe
 function vdotFrom(distM,tSec){var tmin=tSec/60,v=distM/tmin;var vo2=-4.60+0.182258*v+0.000104*v*v;var pct=0.8+0.1894393*Math.exp(-0.012778*tmin)+0.2989558*Math.exp(-0.1932605*tmin);return vo2/pct;}
 function velFromPct(vdot,pct){var vo2=vdot*pct,a=0.000104,b=0.182258,c=-(4.60+vo2);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);} // m/min
+var TSEC="timer";
+var TSECS=[["timer","⏱ Timer"],["kalk","Kalkulatory"],["race","Predictor"],["stacje","Stacje"],["playbook","Playbook"],["pb","PB"]];
+function setTsec(k){TSEC=k;renderTools();window.scrollTo(0,0);}
 function renderTools(){
-  var h="";
+  var h="<div class=\"filters\">"+TSECS.map(function(s){return "<span class=\"fbtn"+(TSEC===s[0]?" on":"")+"\" onclick=\"setTsec('"+s[0]+"')\">"+s[1]+"</span>";}).join("")+"</div>";
+  if(TSEC==="timer"){
   // --- Timer symulacji ---
   h+="<h2>Timer symulacji</h2><div class=\"card tmr\" id=\"tmr-box\"></div>";
+  }
+  if(TSEC==="kalk"){
   // --- Kalkulator ciężarów ---
   h+="<h2>Kalkulator ciężarów (% z maksów)</h2><div class=\"card\">";
   h+="<label>Bój</label><select id=\"w-lift\" oninput=\"calcW()\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\">"+esc(m.n)+"</option>";}).join("")+"</select>";
@@ -338,10 +344,14 @@ function renderTools(){
   h+="<div id=\"p-res\"></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>110–129</td></tr><tr><td>Z2 easy/long</td><td>130–144</td></tr><tr><td>Z3 tempo</td><td>145–154</td></tr><tr><td>Z4 próg</td><td>155–161</td></tr><tr><td>Z5 VO2</td><td>162+</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LTHR 167 · max ~182 · RHR baza 41–44</div></div>";
+  }
+  if(TSEC==="race"){
   // --- Race predictor ---
   h+="<h2>Race predictor — Hyrox Solo</h2><div class=\"card\"><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"fillR('teraz')\">teraz</button><button class=\"btn sm\" onclick=\"fillR('cel')\">cel (sub-70)</button></div><div class=\"rc\">";
   h+=RCOMP.map(function(c){return "<label>"+esc(c.n)+"</label><input id=\"r-"+c.k+"\" value=\""+c.teraz+"\" oninput=\"calcR()\">";}).join("");
   h+="</div><div id=\"r-res\"></div><div class=\"sub\" style=\"margin-top:8px\">Model orientacyjny (suma splitów) — nie prognoza gwarantowana. Bieg = tempo/km ×8.</div></div>";
+  }
+  if(TSEC==="stacje"){
   // --- Stacje: czasy + technika + drille ---
   h+="<h2>Stacje — czasy, technika, drille</h2>";
   h+="<div class=\"card\"><div class=\"seq\">"+["Ski","Push","Pull","Burpee","Row","Farmers","Lunges","WB"].map(function(s){return "<span>"+s+"</span>";}).join("<span class=\"ar\">→</span>")+"</div><div class=\"sub\" style=\"margin-top:6px\">Sekwencja na blachę — recytujesz ją na rozgrzewce. Czasy: Warszawa 04.2026 · mediana kohorty sub-70 (AG 30-34) · cel.</div></div>";
@@ -351,19 +361,26 @@ function renderTools(){
       "<div class=\"stn-b\"><div class=\"row3\"><div class=\"c\"><div class=\"k\">teraz</div><div class=\"v\">"+esc(s.teraz)+"</div></div><div class=\"c\"><div class=\"k\">mediana</div><div class=\"v\">"+esc(s.med)+"</div></div><div class=\"c\"><div class=\"k\">cel</div><div class=\"v\">"+esc(s.cel)+"</div></div></div>"+
       "<p class=\"tip\">"+esc(s.tip)+"</p><ul>"+s.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
   }).join("");
+  }
+  if(TSEC==="playbook"){
   // --- Race-day playbook ---
   h+="<h2>Race-day playbook</h2><div class=\"sub\" style=\"margin-bottom:8px\">Szkielet z planu — finalne tempa, liczba żeli i rozbicie serii WB po symulacjach (faza Specyficzna).</div>";
   h+=PLAYBOOK.map(function(p,i){
     return "<div class=\"stn\" id=\"pbk-"+i+"\"><div class=\"stn-h\" onclick=\"tg2('pbk-"+i+"')\"><div><div class=\"nm\">"+esc(p.n)+"</div><div class=\"sp\">"+esc(p.s)+"</div></div><div class=\"tm\">▾</div></div>"+
       "<div class=\"stn-b\"><p class=\"tip\">"+esc(p.tip)+"</p><ul>"+p.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
   }).join("");
+  }
+  if(TSEC==="pb"){
   // --- Baza PB ---
   h+="<h2>Baza PB</h2><div class=\"card\"><div class=\"ct\">Starty</div><table class=\"ptable\">"+PBS.starty.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?"<br><span class=\"sub\">"+esc(p.x)+"</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Bieg</div><table class=\"ptable\">"+PBS.bieg.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Maksy siłowe <span class=\"sub\">(2026-07-06 · potwierdzony / szac.)</span></div><table class=\"ptable\">"+MAKSY.map(function(m){return "<tr><td>"+esc(m.n)+"</td><td><b>"+m.x+"</b>"+(m.y>m.x?" <span class=\"sub\">/ "+m.y+"</span>":"")+"</td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Cele sezonu</div><table class=\"ptable\">"+PBS.cele.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table></div>";
+  }
   $("v-tools").innerHTML=h;
-  calcW();calcP();calcC('p');fillR('teraz');tmrRender();
+  if(TSEC==="kalk"){calcW();calcP();calcC('p');}
+  if(TSEC==="race")fillR('teraz');
+  if(TSEC==="timer")tmrRender();
 }
 function tgS(i){$("stn-"+i).classList.toggle("open");}
 function tg2(id){$(id).classList.toggle("open");}
@@ -413,8 +430,25 @@ function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");
 function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
 function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
 document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
-document.addEventListener("focusin",function(e){var t=e.target&&e.target.tagName;if(t==="TEXTAREA"||t==="INPUT"||t==="SELECT")document.querySelector(".tabs").style.display="none";});
-document.addEventListener("focusout",function(){setTimeout(function(){var a=document.activeElement&&document.activeElement.tagName;if(a!=="TEXTAREA"&&a!=="INPUT"&&a!=="SELECT")document.querySelector(".tabs").style.display="flex";},150);});
+// Stopka vs klawiatura iOS: fixed bottom:0 łamie się, gdy stopka wraca zanim iOS odtworzy viewport.
+// Sterujemy przez visualViewport (pokazujemy dopiero gdy wysokość wróciła) + nudge scrolla wymusza repaint.
+(function(){
+  var tabsEl=document.querySelector(".tabs");
+  if(window.visualViewport){
+    var vv=window.visualViewport;
+    var vvFix=function(){
+      var kb=vv.height<window.innerHeight-60;
+      tabsEl.style.display=kb?"none":"flex";
+      if(!kb)requestAnimationFrame(function(){window.scrollBy(0,1);window.scrollBy(0,-1);});
+    };
+    vv.addEventListener("resize",vvFix);
+    vv.addEventListener("scroll",vvFix);
+    window.addEventListener("focusout",function(){setTimeout(vvFix,250);});
+  }else{
+    document.addEventListener("focusin",function(e){var t=e.target&&e.target.tagName;if(t==="TEXTAREA"||t==="INPUT"||t==="SELECT")tabsEl.style.display="none";});
+    document.addEventListener("focusout",function(){setTimeout(function(){var a=document.activeElement&&document.activeElement.tagName;if(a!=="TEXTAREA"&&a!=="INPUT"&&a!=="SELECT")tabsEl.style.display="flex";},150);});
+  }
+})();
 boot();
 </script>
 </body>
