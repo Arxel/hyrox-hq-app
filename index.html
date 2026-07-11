@@ -167,7 +167,8 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 <div class="toast" id="toast"></div>
 <script>
 var EXEC="https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
-var TOKEN=(location.hash||"").replace(/^#k?=?/,"").trim();
+// __TOKEN/__BOOT wstrzykuje fallback SPA w Apps Script (GET ?k=) — ten sam plik służy obu frontom
+var TOKEN=(window.__TOKEN||(location.hash||"").replace(/^#k?=?/,"").trim());
 if(TOKEN){try{localStorage.setItem("hx_token",TOKEN);}catch(e){}}
 else{try{TOKEN=localStorage.getItem("hx_token")||"";}catch(e){}}
 var BOOT=null;
@@ -246,6 +247,7 @@ var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
   apiFuel:function(a){return Object.assign({app:"fuel"},a);}};
 function run(fn,arg,cb){post(OPS[fn](arg),cb);}
 function boot(){
+  if(window.__BOOT){BOOT=window.__BOOT;window.__BOOT=null;$("splash").style.display="none";renderAll();return;} // fallback SPA: boot z serwera (odśwież → normalny fetch)
   if(!TOKEN){tokenForm();return;}
   $("splash").style.display="block";$("splash").textContent="Ładowanie…";
   post({app:"boot"},function(r){BOOT=r.boot;$("splash").style.display="none";renderAll();});
