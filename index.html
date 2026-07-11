@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hyrox HQ">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -444,20 +444,25 @@ function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");
 function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
 function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
 document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
-// Stopka vs klawiatura iOS: fixed bottom:0 łamie się, gdy stopka wraca zanim iOS odtworzy viewport.
-// Sterujemy przez visualViewport (pokazujemy dopiero gdy wysokość wróciła) + nudge scrolla wymusza repaint.
+// Stopka vs klawiatura iOS: fixed bottom:0 na iOS jest liczone od layout viewportu, więc gdy
+// klawiatura kurczy visual viewport, stopka wisi pod klawiaturą (albo iOS renderuje ją w środku).
+// Zamiast chować/pokazywać (flaky przez timing powrotu viewportu) — przesuwamy .tabs w górę tak,
+// by zawsze siedziała na dole WIDOCZNEGO obszaru: overlap = innerHeight - vv.height - vv.offsetTop.
+// Przy działającym interactive-widget=resizes-content (Chromium) innerHeight kurczy się z viewportem
+// → overlap≈0 → translateY(0), a bottom:0 jest już poprawne. Oba mechanizmy komponują się bez konfliktu.
 (function(){
   var tabsEl=document.querySelector(".tabs");
   if(window.visualViewport){
     var vv=window.visualViewport;
     var vvFix=function(){
-      var kb=vv.height<window.innerHeight-60;
-      tabsEl.style.display=kb?"none":"flex";
-      if(!kb)requestAnimationFrame(function(){window.scrollBy(0,1);window.scrollBy(0,-1);});
+      var overlap=window.innerHeight-vv.height-vv.offsetTop;
+      if(overlap<1)overlap=0;
+      tabsEl.style.transform=overlap?"translateY(-"+overlap+"px)":"";
     };
     vv.addEventListener("resize",vvFix);
     vv.addEventListener("scroll",vvFix);
-    window.addEventListener("focusout",function(){setTimeout(vvFix,250);});
+    window.addEventListener("focusout",function(){setTimeout(vvFix,50);});
+    vvFix();
   }else{
     document.addEventListener("focusin",function(e){var t=e.target&&e.target.tagName;if(t==="TEXTAREA"||t==="INPUT"||t==="SELECT")tabsEl.style.display="none";});
     document.addEventListener("focusout",function(){setTimeout(function(){var a=document.activeElement&&document.activeElement.tagName;if(a!=="TEXTAREA"&&a!=="INPUT"&&a!=="SELECT")tabsEl.style.display="flex";},150);});
