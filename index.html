@@ -103,6 +103,13 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 #v-tools select,#v-tools input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
 #v-tools label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
 .rc{display:grid;grid-template-columns:1fr 84px;gap:5px 8px;align-items:center;margin-top:8px}
+.dblg{display:grid;grid-template-columns:1fr 64px 72px;gap:5px 8px;align-items:center;margin-top:8px}
+.dblg .dh{font-size:11px;color:var(--mut);font-weight:600}
+.dblg input{padding:6px 8px;border-radius:7px;text-align:center}
+.chkr{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.chkr:last-of-type{border-bottom:0}
+.chkr input{width:auto!important;margin-top:2px;accent-color:var(--acc)}
+.chkr.done{color:var(--mut);text-decoration:line-through}
 #v-tools .rc label{font-size:13px;color:var(--ink);margin:0}
 #v-tools .rc input{padding:6px 8px;border-radius:7px;text-align:center}
 .rtot{display:flex;align-items:baseline;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
@@ -200,6 +207,25 @@ var PLAYBOOK=[
 {n:"Logistyka dnia",s:"rano",tip:"Suma kontrolna planu: stacje ~29:55 + bieg 35:45 + roxzone 4:15 = 69:55 — bufor ~5 s, każdy element musi zagrać.",dr:["Pobudka 3+ h przed startem","Śniadanie przetrenowane","Na miejscu 75–90 min przed","Sprawdzenie wave/pasa startowego","Kofeina wg protokołu (30–45 min przed)"]}];
 // #36 Baza PB — starty + bieg + maksy (maksy-silowe.md, 2026-07-06)
 var PBS={starty:[{n:"Hyrox Poznań 2025",v:"1:19:44"},{n:"Hyrox Warszawa 04.2026",v:"1:13:59",x:"czysto · oficjalnie z karą 180 s (lunges) · #201 AG 30-34, #802/2560"}],bieg:[{n:"5 km (świeże)",v:"~21:25",x:"4:17/km"}],cele:[{n:"Hyrox Mix 15.10.2026",v:"sub-60"},{n:"Hyrox Solo 20.11.2026",v:"sub-70",x:"A-cel sezonu"}]};
+// #29 Doubles — Mix 15.10 sub-60. Ciężary Mixed = Men's Open (rulebook 25/26); WB 6 kg, cel 3,0 m (on) / 2,7 m (ona).
+// split = % pracy Tomka (szkic — kalibracja przy 1. wspólnej sesji, do ~12–13.09); czasy = szkic budżetu sub-60.
+var DBLST=[
+{k:"ski",n:"SkiErg",spec:"1000 m",split:50,t:"3:30"},
+{k:"push",n:"Sled Push",spec:"50 m · 152 kg",split:70,t:"2:00"},
+{k:"pull",n:"Sled Pull",spec:"50 m · 103 kg",split:70,t:"3:00"},
+{k:"bbj",n:"Burpee BJ",spec:"80 m",split:50,t:"3:30"},
+{k:"row",n:"Row",spec:"1000 m",split:50,t:"3:40"},
+{k:"farmers",n:"Farmers Carry",spec:"200 m · 2×24 kg",split:60,t:"1:20"},
+{k:"lunges",n:"Lunges",spec:"100 m · 20 kg",split:60,t:"3:10"},
+{k:"wb",n:"Wall Balls",spec:"100 powt. · 6 kg · 3,0/2,7 m",split:55,t:"3:20"}];
+var DBL={pace:"4:12",rox:"2:30",s:{},t:{}};
+try{var _d=JSON.parse(localStorage.getItem("hx_dbl")||"null");if(_d&&_d.s)DBL=_d;}catch(e){}
+// #27 Strona startu — starty sezonu + timeline z playbooka (offsety w min od startu) + checklisty
+var RACES={mix:{n:"Hyrox Mix",d:"2026-10-15",cel:"sub-60"},solo:{n:"Hyrox Solo",d:"2026-11-20",cel:"sub-70 (A-cel)"}};
+var STL=[[-195,"Pobudka (3+ h przed)"],[-180,"Śniadanie — znane, węglowodanowe"],[-90,"Na miejscu / odbiór pakietu"],[-40,"Kofeina (~250–330 mg, dawka przetestowana)"],[-35,"Rozgrzewka: trucht → mobilność → przebieżki → WB/erg"],[-10,"Strefa startowa — sekwencja w głowie"],[0,"START"]];
+var SCHK={torba:["Buty startowe (+ zapasowe sznurówki)","Strój + pas/numer startowy","Żele ×2 + elektrolity","Bidon","Mały ręcznik","Dokument + telefon","Zegarek naładowany + HR pas"],rano:["Śniadanie przetrenowane (3 h przed)","Zero nowości w dniu startu","Woda małymi łykami, nie na zapas","Sekwencja wyrecytowana: Ski→Push→Pull→Burpee→Row→Farmers→Lunges→WB"]};
+var START={race:"mix",mix:{time:"",wave:"",nr:"",chk:{}},solo:{time:"",wave:"",nr:"",chk:{}}};
+try{var _st=JSON.parse(localStorage.getItem("hx_start")||"null");if(_st&&_st.mix)START=_st;}catch(e){}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function $(id){return document.getElementById(id);}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
@@ -341,7 +367,7 @@ function round25(x){return Math.round(x/2.5)*2.5;}
 function vdotFrom(distM,tSec){var tmin=tSec/60,v=distM/tmin;var vo2=-4.60+0.182258*v+0.000104*v*v;var pct=0.8+0.1894393*Math.exp(-0.012778*tmin)+0.2989558*Math.exp(-0.1932605*tmin);return vo2/pct;}
 function velFromPct(vdot,pct){var vo2=vdot*pct,a=0.000104,b=0.182258,c=-(4.60+vo2);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);} // m/min
 var TSEC="timer";
-var TSECS=[["timer","⏱ Timer"],["kalk","Kalkulatory"],["race","Predictor"],["stacje","Stacje"],["playbook","Playbook"],["pb","PB"]];
+var TSECS=[["timer","⏱ Timer"],["kalk","Kalkulatory"],["race","Predictor"],["stacje","Stacje"],["dbl","Doubles"],["start","🏁 Start"],["playbook","Playbook"],["pb","PB"]];
 function setTsec(k){TSEC=k;renderTools();window.scrollTo(0,0);}
 function renderTools(){
   var h="<div class=\"filters\">"+TSECS.map(function(s){return "<span class=\"fbtn"+(TSEC===s[0]?" on":"")+"\" onclick=\"setTsec('"+s[0]+"')\">"+s[1]+"</span>";}).join("")+"</div>";
@@ -379,6 +405,39 @@ function renderTools(){
       "<p class=\"tip\">"+esc(s.tip)+"</p><ul>"+s.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
   }).join("");
   }
+  if(TSEC==="dbl"){
+  // --- #29 Doubles: zasady + planer podziału + budżet sub-60 ---
+  h+="<h2>Doubles — Mix 15.10 (sub-60)</h2>";
+  h+="<div class=\"card\"><div class=\"ct\">Zasady Mixed (rulebook 25/26)</div><ul style=\"margin:6px 0 0;padding-left:18px;font-size:13px\">"+
+    "<li><b>Biegi: oboje, razem</b> — tempo pary = wolniejszy partner na dziś</li>"+
+    "<li><b>Stacje: praca dzielona dowolnie</b>, pracuje jedno naraz (zmiany bez limitu)</li>"+
+    "<li><b>Ciężary = Men's Open</b> — dla Ciebie nic lżej, partnerka na męskich obciążeniach → to definiuje podział</li>"+
+    "<li><b>Wall Balls:</b> oboje 6 kg, cel <b>3,0 m (on) / 2,7 m (ona)</b></li>"+
+    "<li>Kary jak w solo — czyste powtórzenia &gt; szybkie</li></ul></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Planer podziału <span class=\"sub\">(% pracy Tomka · czas cel stacji)</span></div><div class=\"dblg\">";
+  h+="<div class=\"dh\">Stacja</div><div class=\"dh\">Ty %</div><div class=\"dh\">Cel</div>";
+  h+=DBLST.map(function(s){var sp=(DBL.s[s.k]!=null?DBL.s[s.k]:s.split),tv=DBL.t[s.k]||s.t;
+    return "<div><div style=\"font-weight:600\">"+esc(s.n)+"</div><div class=\"sub\">"+esc(s.spec)+"</div></div>"+
+      "<input id=\"d-s-"+s.k+"\" type=\"number\" min=\"0\" max=\"100\" value=\""+sp+"\" oninput=\"calcDbl()\">"+
+      "<input id=\"d-t-"+s.k+"\" value=\""+esc(tv)+"\" oninput=\"calcDbl()\">";}).join("");
+  h+="</div><div class=\"rc\"><label>Bieg 8×1 km razem (tempo /km)</label><input id=\"d-pace\" value=\""+esc(DBL.pace)+"\" oninput=\"calcDbl()\"><label>Roxzone (8 przejść + zmiany)</label><input id=\"d-rox\" value=\""+esc(DBL.rox)+"\" oninput=\"calcDbl()\"></div>";
+  h+="<div id=\"d-res\"></div><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"dblReset()\">reset szkicu</button><button class=\"btn pri sm\" onclick=\"dblSend()\">Wyślij plan do Inboxu</button></div>";
+  h+="<div class=\"sub\" style=\"margin-top:8px\">Szkic — kalibracja przy 1. wspólnej sesji doubles (symulacja 1, do ~12–13.09); strategia dogrywana w F4. Zmiany zapisują się na telefonie.</div></div>";
+  }
+  if(TSEC==="start"){
+  // --- #27 Strona startu: countdown + dane startu + timeline + checklisty ---
+  var R=RACES[START.race],CS=START[START.race];
+  h+="<h2>Strona startu</h2><div class=\"btnrow\" style=\"margin-bottom:8px\">"+Object.keys(RACES).map(function(k){return "<button class=\"btn sm"+(START.race===k?" pri":"")+"\" onclick=\"startRace('"+k+"')\">"+esc(RACES[k].n)+"</button>";}).join("")+"</div>";
+  var dd=Math.ceil((new Date(R.d+"T00:00:00")-new Date())/864e5);
+  h+="<div class=\"card\"><div class=\"res\">"+(dd>0?dd+" dni <span class=\"u\">do startu</span>":(dd===0?"DZIŚ! 🏁":"po starcie"))+"</div><div class=\"sub\">"+esc(R.n)+" · "+esc(R.d)+" · cel <b>"+esc(R.cel)+"</b></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Dane startu <span class=\"sub\">(uzupełnij, gdy przyjdą — zapisują się na telefonie)</span></div><div class=\"rc\">"+
+    "<label>Godzina startu (HH:MM)</label><input id=\"st-time\" value=\""+esc(CS.time)+"\" placeholder=\"10:30\" oninput=\"startInp()\">"+
+    "<label>Wave / pas</label><input id=\"st-wave\" value=\""+esc(CS.wave)+"\" oninput=\"startInp()\">"+
+    "<label>Nr startowy</label><input id=\"st-nr\" value=\""+esc(CS.nr)+"\" oninput=\"startInp()\"></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Timeline dnia</div><div id=\"st-tl\"></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Torba — wieczór przed</div>"+startChkHtml("torba")+"</div>";
+  h+="<div class=\"card\"><div class=\"ct\">Rano w dniu startu</div>"+startChkHtml("rano")+"<div class=\"sub\" style=\"margin-top:6px\">Taktyka i fueling → sekcja Playbook.</div></div>";
+  }
   if(TSEC==="playbook"){
   // --- Race-day playbook ---
   h+="<h2>Race-day playbook</h2><div class=\"sub\" style=\"margin-bottom:8px\">Szkielet z planu — finalne tempa, liczba żeli i rozbicie serii WB po symulacjach (faza Specyficzna).</div>";
@@ -398,9 +457,53 @@ function renderTools(){
   if(TSEC==="kalk"){calcW();calcP();calcC('p');}
   if(TSEC==="race")fillR('teraz');
   if(TSEC==="timer")tmrRender();
+  if(TSEC==="dbl")calcDbl();
+  if(TSEC==="start")startTL();
 }
 function tgS(i){$("stn-"+i).classList.toggle("open");}
 function tg2(id){$(id).classList.toggle("open");}
+// ---------- #29 Doubles ----------
+function dblSave(){try{localStorage.setItem("hx_dbl",JSON.stringify(DBL));}catch(e){}}
+function calcDbl(){
+  var sum=0,bad=false;
+  DBLST.forEach(function(s){
+    DBL.s[s.k]=parseInt($("d-s-"+s.k).value,10)||0;
+    DBL.t[s.k]=$("d-t-"+s.k).value;
+    var v=parseMS(DBL.t[s.k]);if(v==null)bad=true;else sum+=v;
+  });
+  DBL.pace=$("d-pace").value;DBL.rox=$("d-rox").value;
+  var pc=parseMS(DBL.pace),rx=parseMS(DBL.rox);
+  if(pc==null||rx==null)bad=true;else sum+=pc*8+rx;
+  dblSave();
+  if(bad){$("d-res").innerHTML="<div class=\"sub\" style=\"margin-top:8px\">wpisz czasy mm:ss</div>";return;}
+  var d=3600-sum,cls=d>=0?"dneg":"dpos";
+  $("d-res").innerHTML="<div class=\"res\">"+fmtMS(sum)+" <span class=\"u\">/ cel 60:00 · "+(d>=0?"bufor":"BRAKUJE")+" <span class=\""+cls+"\">"+fmtMS(Math.abs(d))+"</span></span></div>"+
+    "<div class=\"sub\">bieg "+fmtMS(pc*8)+" · stacje "+fmtMS(sum-pc*8-rx)+" · roxzone "+fmtMS(rx)+"</div>";
+}
+function dblReset(){DBL={pace:"4:12",rox:"2:30",s:{},t:{}};dblSave();renderTools();}
+function dblSend(){
+  var L=["Plan doubles Mix 15.10 (szkic z apki):","Bieg razem "+DBL.pace+"/km · roxzone "+DBL.rox];
+  DBLST.forEach(function(s){L.push(s.n+": ja "+(DBL.s[s.k]!=null?DBL.s[s.k]:s.split)+"% / partnerka "+(100-(DBL.s[s.k]!=null?DBL.s[s.k]:s.split))+"% · cel "+(DBL.t[s.k]||s.t));});
+  run("apiNote",L.join("\n"),function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:L.join("\n"),s:"nowa"});toast("Plan w Inboxie — Claude przetworzy");});
+}
+// ---------- #27 Strona startu ----------
+function startSave(){try{localStorage.setItem("hx_start",JSON.stringify(START));}catch(e){}}
+function startRace(k){START.race=k;startSave();renderTools();}
+function startInp(){var CS=START[START.race];CS.time=$("st-time").value;CS.wave=$("st-wave").value;CS.nr=$("st-nr").value;startSave();startTL();}
+function startTL(){
+  var el=$("st-tl");if(!el)return;
+  var CS=START[START.race],t=parseMS(CS.time);
+  if(t==null){el.innerHTML="<div class=\"sub\">Wpisz godzinę startu, a rozpiszę cały dzień (pobudka → kofeina → rozgrzewka → start).</div>";return;}
+  el.innerHTML="<table class=\"ptable\">"+STL.map(function(r){
+    var m=t+r[0],hh=Math.floor(((m%1440)+1440)%1440/60),mm=((m%60)+60)%60;
+    return "<tr><td style=\"text-align:left\">"+esc(r[1])+"</td><td><b>"+hh+":"+pad2(mm)+"</b></td></tr>";}).join("")+"</table>";
+}
+function startChkHtml(g){
+  var CS=START[START.race];
+  return SCHK[g].map(function(it,i){var id=g+i,on=!!CS.chk[id];
+    return "<label class=\"chkr"+(on?" done":"")+"\"><input type=\"checkbox\""+(on?" checked":"")+" onchange=\"startChk('"+id+"',this.checked)\"> "+esc(it)+"</label>";}).join("");
+}
+function startChk(id,v){var CS=START[START.race];CS.chk[id]=v;startSave();renderTools();}
 // ---------- Timer symulacji ----------
 function tmrSave(){try{localStorage.setItem("hx_tmr",JSON.stringify(TMR));}catch(e){}}
 function tmrSplits(){var out=[],prev=TMR.t0;for(var i=0;i<TMR.laps.length;i++){out.push((TMR.laps[i]-prev)/1000);prev=TMR.laps[i];}return out;}
