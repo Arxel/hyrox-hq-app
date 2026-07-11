@@ -124,6 +124,11 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 .badge.hold{background:var(--goodbg);color:var(--goodtxt)}
 .seq{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;font-weight:600;color:var(--ink)}
 .seq .ar{color:var(--mut);font-weight:400}
+.tmr .clk{font-size:44px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0}
+.tmr .seg{text-align:center;font-size:15px;font-weight:650}
+.tmr .segt{text-align:center;font-size:12px;color:var(--mut);margin-bottom:8px}
+.tmr .bigbtn{width:100%;padding:16px;font-size:17px;border-radius:12px}
+.tmr .dneg{color:var(--goodtxt)}.tmr .dpos{color:var(--crit)}
 </style>
 </head>
 <body>
@@ -170,6 +175,20 @@ var STACJE=[
 {n:"Wall Balls",spec:"100 powt. · 6 kg / 3 m",teraz:"5:36",med:"4:58",cel:"sub-5:00",lev:1,tip:"Rozbicie z góry: zaplanowane serie (np. 20/15/15/…) > walka do odcięcia. Stretch 4:45.",dr:["Skill snack: serie po 15–20 w rytmie startowym","Objętość WB w bloku siły wytrzymałościowej (F3)","Max seria unbroken w mini-benchmarku ~10–14.08","To tu spłacasz dług tlenowy za zbyt szybki 1. km — pacing biegu chroni WB"]},
 {n:"Roxzone",spec:"8 przejść",teraz:"~4:50",med:"4:20 (min 4:03)",cel:"~4:15",lev:1,tip:"Wchodzisz i wychodzisz TRUCHTEM, zawsze. Żadnego stania — odpoczynek to następny bieg w kontrolowanym tempie.",dr:["Trenowany jak stacja: w symulacjach ćwicz przejścia „w biegu”","Nikt z kohorty sub-70 w Warszawie nie zszedł pod 4:00 — 3:30 to poziom podium open","Realny zysk ~35–40 s dyscypliny, nie 80 s"]},
 {n:"Bieg",spec:"8×1 km",teraz:"37:05",med:"36:07",cel:"~35:45",lev:1,tip:"Pierwszy km CELOWO 10–15 s wolniej (~4:50–4:55 przy celu 4:40). Euforia na starcie = dług tlenowy spłacany na wall balls. Negative split wygrywa w Hyroxie.",dr:["Konsekwencja tempa środkowych km (kohorta biega 4:45–4:55)","F3: compromised intervals 1 km @ tempo docelowe + stacja ×4–6","Marker F3: compromised 4:40/km to bufor, nie warunek"]}];
+// #21 Timer symulacji — 16 segmentów (8 biegów + 8 stacji); cele: bieg 4:40 + stacje z planu
+var SIMST=[["SkiErg","4:10"],["Sled Push","2:30"],["Sled Pull","3:45"],["Burpee BJ","4:25"],["Row","4:30"],["Farmers","1:30"],["Lunges","4:05"],["Wall Balls","5:00"]];
+var SIMSEG=[];SIMST.forEach(function(s,i){SIMSEG.push({n:"Bieg "+(i+1),t:"4:40"});SIMSEG.push({n:s[0],t:s[1]});});
+var TMR={t0:null,laps:[]};
+try{var _t=JSON.parse(localStorage.getItem("hx_tmr")||"null");if(_t&&_t.t0)TMR=_t;}catch(e){}
+// #23 Race-day playbook (plan-sezon.md — szkielet, dopracowanie po symulacjach)
+var PLAYBOOK=[
+{n:"Pacing biegu — reguła nr 1",s:"negative split",tip:"Pierwszy 1 km CELOWO 10–15 s wolniej niż średnia docelowa (~4:50–4:55 przy celu 4:40).",dr:["Klasyczny błąd amatora: euforia + świeżość = 4:20 na 1. km i dług tlenowy spłacany na wall balls","Środkowe km konsekwentnie 4:45–4:55 (tak biega kohorta sub-70)","Negative split wygrywa w Hyroxie"]},
+{n:"Rozgrzewka",s:"~20–25 min",tip:"Start w pełnej gotowości, nie „na zimno”. Do przećwiczenia przed symulacją 2.",dr:["8–10 min trucht progresywny","Mobilność dynamiczna","2–3 przebieżki","10–15 lekkich wall balls / kilka pociągnięć erga","Na rozgrzewce recytujesz sekwencję: Ski→Push→Pull→Burpee→Row→Farmers→Lunges→WB"]},
+{n:"Fueling — przed startem",s:"NIC nowego w dniu startu",tip:"Wszystko przetestowane wcześniej na symulacjach (obie = generalne próby fuelingu).",dr:["3 h przed: znany posiłek węglowodanowy (owsianka/ryż + banan), mało błonnika i tłuszczu","30–45 min przed: kofeina 3–4 mg/kg = ~250–330 mg (tolerancję testuj od dolnej granicy)","15 min przed: opcjonalnie ½ żelu lub kilka łyków napoju węglowodanowego"]},
+{n:"Fueling — w trakcie",s:"~30–60 g węgli/h",tip:"1 żel (~25 g) około 25–35 min wysiłku — naturalne okno: przy Row (jedyna stacja z „wolnymi” rękami) albo w roxzone przed nią.",dr:["Druga dawka ~55–60 min tylko jeśli symulacje pokażą, że żołądek przyjmuje","Płyny: łyki wody przy okazji, nie „picie na zapas”"]},
+{n:"Ładowanie węgli",s:"48–36 h przed",tip:"Węgle w górę do ~7–8 g/kg/dzień (580–660 g) — TIM na 3000 + własne proste węgle (ryż, banany, soki).",dr:["Dzień przed: znane, nudne jedzenie","Ostatni duży posiłek do 20:00"]},
+{n:"Roxzone i kary",s:"dyscyplina",tip:"Wchodzisz i wychodzisz TRUCHTEM, zawsze. Odpoczynek to następny bieg w kontrolowanym tempie.",dr:["Zero kar to warunek wejścia, nie oszczędność — każda kara wyrzuca ponad bazowe 1:14","Lunges: czyste kolano do maty co powtórzenie (kara 180 s w Warszawie właśnie tu)","WB: zaplanowane serie z góry (20/15/15/…) > walka do odcięcia"]},
+{n:"Logistyka dnia",s:"rano",tip:"Suma kontrolna planu: stacje ~29:55 + bieg 35:45 + roxzone 4:15 = 69:55 — bufor ~5 s, każdy element musi zagrać.",dr:["Pobudka 3+ h przed startem","Śniadanie przetrenowane","Na miejscu 75–90 min przed","Sprawdzenie wave/pasa startowego","Kofeina wg protokołu (30–45 min przed)"]}];
 // #36 Baza PB — starty + bieg + maksy (maksy-silowe.md, 2026-07-06)
 var PBS={starty:[{n:"Hyrox Poznań 2025",v:"1:19:44"},{n:"Hyrox Warszawa 04.2026",v:"1:13:59",x:"czysto · oficjalnie z karą 180 s (lunges) · #201 AG 30-34, #802/2560"}],bieg:[{n:"5 km (świeże)",v:"~21:25",x:"4:17/km"}],cele:[{n:"Hyrox Mix 15.10.2026",v:"sub-60"},{n:"Hyrox Solo 20.11.2026",v:"sub-70",x:"A-cel sezonu"}]};
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
@@ -271,6 +290,8 @@ function vdotFrom(distM,tSec){var tmin=tSec/60,v=distM/tmin;var vo2=-4.60+0.1822
 function velFromPct(vdot,pct){var vo2=vdot*pct,a=0.000104,b=0.182258,c=-(4.60+vo2);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);} // m/min
 function renderTools(){
   var h="";
+  // --- Timer symulacji ---
+  h+="<h2>Timer symulacji</h2><div class=\"card tmr\" id=\"tmr-box\"></div>";
   // --- Kalkulator ciężarów ---
   h+="<h2>Kalkulator ciężarów (% z maksów)</h2><div class=\"card\">";
   h+="<label>Bój</label><select id=\"w-lift\" oninput=\"calcW()\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\">"+esc(m.n)+"</option>";}).join("")+"</select>";
@@ -295,15 +316,54 @@ function renderTools(){
       "<div class=\"stn-b\"><div class=\"row3\"><div class=\"c\"><div class=\"k\">teraz</div><div class=\"v\">"+esc(s.teraz)+"</div></div><div class=\"c\"><div class=\"k\">mediana</div><div class=\"v\">"+esc(s.med)+"</div></div><div class=\"c\"><div class=\"k\">cel</div><div class=\"v\">"+esc(s.cel)+"</div></div></div>"+
       "<p class=\"tip\">"+esc(s.tip)+"</p><ul>"+s.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
   }).join("");
+  // --- Race-day playbook ---
+  h+="<h2>Race-day playbook</h2><div class=\"sub\" style=\"margin-bottom:8px\">Szkielet z planu — finalne tempa, liczba żeli i rozbicie serii WB po symulacjach (faza Specyficzna).</div>";
+  h+=PLAYBOOK.map(function(p,i){
+    return "<div class=\"stn\" id=\"pbk-"+i+"\"><div class=\"stn-h\" onclick=\"tg2('pbk-"+i+"')\"><div><div class=\"nm\">"+esc(p.n)+"</div><div class=\"sp\">"+esc(p.s)+"</div></div><div class=\"tm\">▾</div></div>"+
+      "<div class=\"stn-b\"><p class=\"tip\">"+esc(p.tip)+"</p><ul>"+p.dr.map(function(d){return "<li>"+esc(d)+"</li>";}).join("")+"</ul></div></div>";
+  }).join("");
   // --- Baza PB ---
   h+="<h2>Baza PB</h2><div class=\"card\"><div class=\"ct\">Starty</div><table class=\"ptable\">"+PBS.starty.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?"<br><span class=\"sub\">"+esc(p.x)+"</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Bieg</div><table class=\"ptable\">"+PBS.bieg.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Maksy siłowe <span class=\"sub\">(2026-07-06 · potwierdzony / szac.)</span></div><table class=\"ptable\">"+MAKSY.map(function(m){return "<tr><td>"+esc(m.n)+"</td><td><b>"+m.x+"</b>"+(m.y>m.x?" <span class=\"sub\">/ "+m.y+"</span>":"")+"</td></tr>";}).join("")+"</table>";
   h+="<div class=\"ct\" style=\"margin-top:12px\">Cele sezonu</div><table class=\"ptable\">"+PBS.cele.map(function(p){return "<tr><td>"+esc(p.n)+(p.x?" <span class=\"sub\">("+esc(p.x)+")</span>":"")+"</td><td><b>"+esc(p.v)+"</b></td></tr>";}).join("")+"</table></div>";
   $("v-tools").innerHTML=h;
-  calcW();calcP();calcC('p');fillR('teraz');
+  calcW();calcP();calcC('p');fillR('teraz');tmrRender();
 }
 function tgS(i){$("stn-"+i).classList.toggle("open");}
+function tg2(id){$(id).classList.toggle("open");}
+// ---------- Timer symulacji ----------
+function tmrSave(){try{localStorage.setItem("hx_tmr",JSON.stringify(TMR));}catch(e){}}
+function tmrSplits(){var out=[],prev=TMR.t0;for(var i=0;i<TMR.laps.length;i++){out.push((TMR.laps[i]-prev)/1000);prev=TMR.laps[i];}return out;}
+function tmrDelta(sec,tgt){var d=Math.round(sec-parseMS(tgt));if(!d)return "<span class=\"sub\">0:00</span>";var cls=d<0?"dneg":"dpos";return "<span class=\""+cls+"\">"+(d<0?"−":"+")+fmtMS(Math.abs(d))+"</span>";}
+function tmrRender(){
+  var box=$("tmr-box");if(!box)return;
+  var n=TMR.laps.length;
+  if(!TMR.t0){
+    box.innerHTML="<div class=\"sub\" style=\"margin-bottom:10px\">16 segmentów: Bieg 1 → SkiErg → … → Bieg 8 → Wall Balls. Okrążenie na końcu każdego segmentu (przejścia roxzone wliczone w bieg). Stan przeżywa odświeżenie strony.</div><button class=\"btn pri bigbtn\" onclick=\"tmrStart()\">▶ Start symulacji</button>";
+    return;
+  }
+  if(n>=SIMSEG.length){
+    var sp=tmrSplits(),tot=(TMR.laps[n-1]-TMR.t0)/1000;
+    var rows=SIMSEG.map(function(s,i){return "<tr><td>"+esc(s.n)+"</td><td>"+fmtMS(sp[i])+"</td><td>"+esc(s.t)+"</td><td>"+tmrDelta(sp[i],s.t)+"</td></tr>";}).join("");
+    box.innerHTML="<div class=\"clk\">"+fmtHMS(tot)+"</div><div class=\"segt\">symulacja zakończona — "+tmrDelta(tot,"70:00")+" vs 70:00</div><table class=\"ptable\"><tr><th>Segment</th><th>Czas</th><th>Cel</th><th>Δ</th></tr>"+rows+"</table><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"tmrSend()\">Wyślij do Inboxu</button><button class=\"btn\" onclick=\"tmrReset()\">Reset</button></div>";
+    return;
+  }
+  var seg=SIMSEG[n];
+  var last=n?("ost.: "+esc(SIMSEG[n-1].n)+" "+fmtMS(tmrSplits()[n-1])+" (cel "+esc(SIMSEG[n-1].t)+")"):"";
+  box.innerHTML="<div class=\"clk\" id=\"tm-clk\">0:00</div><div class=\"seg\">"+(n+1)+"/16 · "+esc(seg.n)+"</div><div class=\"segt\">cel segmentu "+esc(seg.t)+(last?" · "+last:"")+"</div><button class=\"btn pri bigbtn\" onclick=\"tmrLap()\">⏱ Okrążenie — koniec: "+esc(seg.n)+"</button><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"tmrReset()\">przerwij i wyzeruj</button></div>";
+  tmrTick();
+}
+function tmrTick(){var el=$("tm-clk");if(!el||!TMR.t0||TMR.laps.length>=SIMSEG.length)return;var base=TMR.laps.length?TMR.laps[TMR.laps.length-1]:TMR.t0;el.textContent=fmtHMS((Date.now()-base)/1000);}
+setInterval(tmrTick,250);
+function tmrStart(){TMR={t0:Date.now(),laps:[]};tmrSave();tmrRender();}
+function tmrLap(){TMR.laps.push(Date.now());tmrSave();tmrRender();if(TMR.laps.length>=SIMSEG.length)toast("Meta! Sprawdź splity");}
+function tmrReset(){if(!confirm("Wyzerować timer symulacji?"))return;TMR={t0:null,laps:[]};tmrSave();tmrRender();}
+function tmrSend(){
+  var sp=tmrSplits(),tot=(TMR.laps[TMR.laps.length-1]-TMR.t0)/1000;
+  var txt="Symulacja (timer apki) "+BOOT.today+": TOTAL "+fmtHMS(tot)+" | "+SIMSEG.map(function(s,i){return s.n+" "+fmtMS(sp[i])+" (cel "+s.t+")";}).join(" | ");
+  run("apiNote",txt,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:txt,s:"nowa"});renderNote();toast("Wynik w Inboxie — Claude przetworzy");});
+}
 function calcW(){var m=MAKSY[+$("w-lift").value],pct=parseFloat($("w-pct").value),base=$("w-base").value,rm=base==="y"?m.y:m.x;var res=$("w-res");if(isNaN(pct)||pct<=0){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj %</div>";return;}var kg=round25(rm*pct/100);var note=(base==="x"&&m.y>m.x)?" <span class=\"sub\">(szac. sufit "+m.y+")</span>":"";var tbl="<table class=\"ptable\"><tr><th>%</th><th>kg</th></tr>"+[60,65,70,75,80,85,90,95].map(function(p){return "<tr><td>"+p+"%</td><td>"+round25(rm*p/100)+"</td></tr>";}).join("")+"</table>";res.innerHTML="<div class=\"res\">"+kg+" kg <span class=\"u\">= "+pct+"% z "+rm+" kg"+note+"</span></div>"+tbl;}
 function calcP(){var dist=+$("p-dist").value,t=parseMS($("p-time").value),res=$("p-res");if(t==null){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj czas mm:ss</div>";return;}var vd=vdotFrom(dist,t);var zones=[["E — easy/long",0.70],["M — maraton/tempo ciągłe",0.84],["T — próg",0.88],["I — interwały VO2",0.975],["R — reps/szybkość",1.05]];var rows=zones.map(function(z){var v=velFromPct(vd,z[1]),pace=1000/v,ms=v/60;return "<tr><td>"+z[0]+"</td><td>"+fmtMS(pace*60)+"</td><td>"+ms.toFixed(2)+"</td></tr>";}).join("");res.innerHTML="<div class=\"res\">VDOT "+vd.toFixed(1)+"</div><table class=\"ptable\"><tr><th>Intensywność</th><th>/km</th><th>m/s</th></tr>"+rows+"</table>";}
 function calcC(from){var pe=$("c-pace"),me=$("c-ms");if(from==='p'){var s=parseMS(pe.value);if(s==null||s<=0)return;me.value=(1000/s).toFixed(2);}else{var v=parseFloat(String(me.value).replace(',','.'));if(isNaN(v)||v<=0)return;pe.value=fmtMS(1000/v);}}
