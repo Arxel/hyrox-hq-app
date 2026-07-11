@@ -23,7 +23,10 @@
 html{background:var(--bg)}
 html,body{overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,system-ui,sans-serif;
-padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area-inset-bottom,0px))}
+padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area-inset-bottom,0px));
+/* Stała wysokość dokumentu: krótkie podstrony (Timer, Notatki) dawały dokument krótszy niż ekran,
+   a przełączenie krótka↔długa zmieniało przewijalność → iOS klampował scroll i stopka skakała. */
+box-sizing:border-box;min-height:100vh;min-height:100dvh}
 .x,.em,.ev,.note,.t,.rx{overflow-wrap:anywhere}
 h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:12px}
 .head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -443,7 +446,7 @@ function sendLog(){var o={day:$("l-day").value,rpe:$("l-rpe").value,sw:$("l-sw")
 function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");return;}run("apiNote",t,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:t,s:"nowa"});renderNote();toast("W inboxie");});}
 function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
 function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
-document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");};});
+document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");window.scrollTo(0,0);};});
 // Stopka: zwykłe position:fixed;bottom:0 (patrz CSS .tabs) — bez gimnastyki z visualViewport.
 // Podskakiwanie na przełączeniu zakładek brało się z listenerów vv.scroll/resize; a „powiększanie"
 // layoutu po dotknięciu pola to auto-zoom iOS na inputach <16px — ugaszony font-size:16px na polach.
