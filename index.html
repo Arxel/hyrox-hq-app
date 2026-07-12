@@ -27,7 +27,11 @@ padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area
 /* Stała wysokość dokumentu: krótkie podstrony (Timer, Notatki) dawały dokument krótszy niż ekran,
    a przełączenie krótka↔długa zmieniało przewijalność → iOS klampował scroll i stopka skakała. */
 box-sizing:border-box;min-height:100vh;min-height:100dvh}
-.x,.em,.ev,.note,.t,.rx{overflow-wrap:anywhere}
+.x,.em,.ev,.note,.t,.rx,.coach{overflow-wrap:anywhere}
+.coach{margin-top:10px;border-left:3px solid var(--acc);background:var(--card);border-radius:0 8px 8px 0;padding:8px 12px;font-size:13px;white-space:pre-wrap}
+.coach .ch{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);font-weight:700;margin-bottom:3px}
+.shoe{margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+.shoe b{color:var(--acc)}
 h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:12px}
 .head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .refresh{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;
@@ -272,7 +276,30 @@ function saveTok(){
 function dd(iso){return Math.ceil((new Date(iso+"T00:00:00")-new Date(BOOT.today+"T00:00:00"))/86400000);}
 function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
 function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
-function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"')\">✓ zrobione</button></div>":"";return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(p.x)+"</div>"+btn+"</div>";}
+function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"')\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
+function classifySess(t){t=(t||"").toLowerCase();
+  if(/trail|gór|gor|teren/.test(t))return "trail";
+  if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym";
+  if(/(próg|prog|tempo|vo2|podbieg|interw|rytm|5 ?km|10 ?km|ostr|wyścig|wyscig|start|symulac|zawody)/.test(t))return "plate";
+  return "daily";
+}
+function shoeFor(t){
+  if(!BOOT.buty||!BOOT.buty.length)return null;
+  var cat=classifySess(t),tl=(t||"").toLowerCase();
+  var pool=BOOT.buty.filter(function(b){return b.km!=null;});
+  var typ=function(b,re){return re.test((b.typ||"").toLowerCase());};
+  var byTyp=function(re){return pool.filter(function(b){return typ(b,re);});};
+  var fresh=function(a){return a.slice().sort(function(x,y){var rx=x.lim?x.km/x.lim:x.km/700,ry=y.lim?y.km/y.lim:y.km/700;return rx-ry;})[0];};
+  var arr,reason;
+  if(cat==="trail"){arr=byTyp(/trail/);reason="teren";}
+  else if(cat==="gym"){arr=pool.filter(function(b){return typ(b,/siłow|silow|box/)||/metcon/.test((b.n||"").toLowerCase());});reason="siła / box";}
+  else if(cat==="plate"){var pl=byTyp(/płytk|plytk|plate/);var race=/start|symulac|zawody|wyścig|wyscig/.test(tl);if(race){arr=pl;reason="start — najświeższa płyta";}else{var ne=pl.filter(function(b){return !/elite/.test((b.n||"").toLowerCase());});arr=ne.length?ne:pl;reason="jakość — płyta węglowa (Elite chowamy na start)";}}
+  else{arr=byTyp(/trener|daily/);reason="easy/long — daily trainer (rotacja, oszczędza najbardziej zużyty)";}
+  if(!arr||!arr.length)return null;
+  var b=fresh(arr);
+  return {name:b.n,km:b.km,lim:b.lim,reason:reason};
+}
+function shoeHtml(t){var s=shoeFor(t);return s?"<div class=\"shoe\">👟 Buty: <b>"+esc(s.name)+"</b> "+esc(s.km)+(s.lim?("/"+s.lim):"")+" km · "+esc(s.reason)+"</div>":"";}
 function semHtml(){var s=BOOT.semafor,names=["✅ ZIELONO","⚠️ ŻÓŁTO","⛔ CZERWONO"];var v=s.vals?("<div class=\"vals\">RHR "+esc(s.vals.rhr)+" · HRV "+esc(s.vals.hrv)+" ms · sen "+esc(s.vals.sen)+" h · świeżość "+esc(s.vals.sw)+"</div>"):"";return "<div class=\"sem l"+s.lvl+"\"><span class=\"lbl\">"+names[s.lvl]+"</span><ul>"+s.msgs.map(function(m){return "<li>"+esc(m)+"</li>";}).join("")+"</ul>"+v+"</div>";}
 function selOpts(n,sel){var h="";for(var i=1;i<=n;i++)h+="<option"+(i===sel?" selected":"")+">"+i+"</option>";return h;}
 function renderDzis(){
@@ -285,10 +312,11 @@ function renderDzis(){
   h+="<h2>Dziś</h2>";
   if(today){
     h+=cardHtml(today,false);
+    h+=shoeHtml(today.t);
     h+="<div class=\"btnrow\">"+(today.st.indexOf("✓")===-1?"<button class=\"btn pri\" onclick=\"done('"+today.d+"')\">✓ Zrobione</button>":"")+"<button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>";
     h+="<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog()\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
   } else h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień.</div></div>";
-  if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false);
+  if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false)+shoeHtml(tom.t);
   $("v-dzis").innerHTML=h;
 }
 function renderTydz(){var a=BOOT.adh;var h="<div class=\"chips\"><span class=\"chip\">Tydzień: <b>"+a.weekDone+"/"+a.weekDue+" ✓</b></span>"+(a.seasonPct!=null?"<span class=\"chip\">Sezon: <b>"+a.seasonPct+"% zgodnie</b> ("+a.seasonN+")</span>":"")+"</div>";h+=BOOT.plan.map(function(p){return cardHtml(p,true);}).join("");$("v-tydz").innerHTML=h;}
@@ -299,6 +327,7 @@ function renderAnaliza(){
   h+="<h2>Fazy sezonu</h2><div class=\"phases\">";
   var tod=day(BOOT.today);
   h+=FAZY.map(function(f){var w=day(f.do_)-day(f.od)+1,on=tod>=day(f.od)&&tod<=day(f.do_);return "<div class=\"ph"+(on?" on":"")+"\" style=\"flex:"+w+"\">"+esc(f.n)+"</div>";}).join("")+"</div>";
+  h+="<div class=\"card\" style=\"margin-top:8px\"><div class=\"ct\">Kamienie milowe (master plan)</div><div class=\"sub\">Deload 27.07–2.08 · Test 10 km ~8.08 (B-effort) · Benchmark stacji 10–14.08 · Budowa→Specyficzna 17.08</div></div>";
   h+="<h2>Objętość biegowa [km/tydz] — strażnik +10% (łydka)</h2>";
   if(BOOT.analiza.volume.length)h+="<div class=\"card\"><div class=\"mrow\" id=\"volbars\"></div></div>";else h+="<div class=\"sub\">brak danych biegowych</div>";
   var ac=BOOT.analiza.acwr;
@@ -331,7 +360,9 @@ function renderAnaliza(){
       return "<div class=\"n\">"+esc(b.n)+"</div>"+bar+"<div style=\"font-size:12px\">"+lbl+"</div>";
     }).join("");
     var updB=BOOT.buty[0]&&BOOT.buty[0].upd;
-    h+="</div>"+(updB?"<div class=\"sub\" style=\"margin-top:6px\">z Garmina, stan: "+esc(updB)+" · ⚠️ = ≥85% limitu</div>":"")+"</div>";
+    var lastRun=null;if(BOOT.dziennik)BOOT.dziennik.forEach(function(e){if(/bieg|long|podbieg|vo2|próg|prog|tempo|interw/i.test(e.typ||"")&&e.d){if(!lastRun||e.d>lastRun)lastRun=e.d;}});
+    var stale=updB&&lastRun&&lastRun>updB;
+    h+="</div>"+(updB?"<div class=\"sub\" style=\"margin-top:6px\">z Garmina, stan: "+esc(updB)+(stale?" · ⚠️ nieaktualne (bieg "+esc(lastRun)+" po aktualizacji — odświeży się przy najbliższym logu)":"")+" · ⚠️ = ≥85% limitu</div>":"")+"</div>";
   }
   $("v-analiza").innerHTML=h;
   if(BOOT.analiza.volume.length)bars($("volbars"),BOOT.analiza.volume);
@@ -391,7 +422,7 @@ function renderTools(){
   h+="<div class=\"ct\">Test biegowy → tempa treningowe</div><div class=\"grid2\"><div><label>Dystans</label><select id=\"p-dist\" oninput=\"calcP()\"><option value=\"3000\">3 km</option><option value=\"5000\" selected>5 km</option><option value=\"8000\">8 km</option><option value=\"10000\">10 km</option></select></div><div><label>Czas mm:ss</label><input id=\"p-time\" value=\"21:25\" oninput=\"calcP()\"></div><div></div></div>";
   h+="<div id=\"p-res\"></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
-  h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>110–129</td></tr><tr><td>Z2 easy/long</td><td>130–144</td></tr><tr><td>Z3 tempo</td><td>145–154</td></tr><tr><td>Z4 próg</td><td>155–161</td></tr><tr><td>Z5 VO2</td><td>162+</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LTHR 167 · max ~182 · RHR baza 41–44</div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>&lt;138</td></tr><tr><td>Z2 easy/long</td><td>138–146</td></tr><tr><td>Z3 tempo</td><td>147–168</td></tr><tr><td>Z4 próg</td><td>169–176</td></tr><tr><td>Z5 VO2</td><td>177–192</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LT2/LTHR 176 · LT1 ~150 · max 192 · RHR baza 41–44 (rekalibracja 11.07)</div></div>";
   }
   if(TSEC==="e1rm"){
   // --- #12 e1RM: log serii (każda seria = wiersz w zakładce Siła) + trend Epley ---
