@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hyrox HQ">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f141a" media="(prefers-color-scheme: dark)">
@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 <title>Hyrox HQ</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--mut:#64748b;--acc:#0f766e;--line:#e2e8f0;
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a202c;--mut:#556274;--acc:#0f766e;--line:#e2e8f0;
 --good:#0ca30c;--warn:#b45309;--crit:#d03b3b;--goodbg:#f0faf0;--warnbg:#fef8e7;--critbg:#fdf0f0;
 --s1:#2a78d6;--s2:#1baf7a;--goodtxt:#006300}
 @media(prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#1a222c;--ink:#e6edf3;--mut:#8b98a5;--acc:#2dd4bf;--line:#2c3844;
@@ -78,7 +78,7 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)
 .dot.ok{background:var(--good)}.dot.watch{background:var(--warn)}.dot.fired{background:var(--crit)}.dot.na{background:var(--mut);opacity:.4}
 .rule .rn{font-weight:600}.rule .rx{color:var(--mut)}
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--mut)}
+.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 13px;font-size:12px;cursor:pointer;color:var(--mut);display:inline-block}
 .fbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .entry{border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px}
 .entry .eh{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
@@ -247,7 +247,8 @@ var START={race:"mix",mix:{time:"",wave:"",nr:"",chk:{}},solo:{time:"",wave:"",n
 try{var _st=JSON.parse(localStorage.getItem("hx_start")||"null");if(_st&&_st.mix)START=_st;}catch(e){}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function $(id){return document.getElementById(id);}
-function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
+var _toastT=null;
+function toast(m,ms){var t=$("toast");t.textContent=m;t.classList.add("show");if(_toastT)clearTimeout(_toastT);_toastT=setTimeout(function(){t.classList.remove("show");},ms||2600);}
 function post(body,cb,opts){
   opts=opts||{};var btn=opts.btn,ot;
   if(btn){if(btn.disabled)return;ot=btn.textContent;btn.disabled=true;btn.textContent="…";} // F2: blokada podwójnego tapnięcia
@@ -257,8 +258,8 @@ function post(body,cb,opts){
   fetch(EXEC,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
     body:JSON.stringify(Object.assign({token:TOKEN},body)),signal:ctrl?ctrl.signal:undefined})
   .then(function(r){return r.json();})
-  .then(function(r){if(r&&r.ok===false){toast("Błąd: "+r.error);opts.onErr&&opts.onErr(r.error);}else{cb&&cb(r);}})
-  .catch(function(e){var m=(e&&e.name==="AbortError")?"przekroczono czas — sprawdź sieć":((e&&e.message)||"brak połączenia");toast("Błąd sieci: "+m);opts.onErr&&opts.onErr(m);})
+  .then(function(r){if(r&&r.ok===false){toast("Błąd: "+r.error,5000);opts.onErr&&opts.onErr(r.error);}else{cb&&cb(r);}})
+  .catch(function(e){var m=(e&&e.name==="AbortError")?"przekroczono czas — sprawdź sieć":((e&&e.message)||"brak połączenia");toast("Błąd sieci: "+m,5000);opts.onErr&&opts.onErr(m);})
   .then(function(){clearTimeout(to);fin();});
 }
 var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
@@ -299,7 +300,7 @@ function saveTok(){
 function dd(iso){return Math.ceil((new Date(iso+"T00:00:00")-new Date(BOOT.today+"T00:00:00"))/86400000);}
 function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
 function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
-function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"',this)\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
+function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn\" onclick=\"done('"+p.d+"',this)\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
 function classifySess(t){t=(t||"").toLowerCase();
   if(/trail|gór|gor|teren/.test(t))return "trail";
   if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym";
@@ -330,15 +331,20 @@ function renderDzis(){
   var tom=BOOT.plan.find(function(p){return p.d>BOOT.today;});
   var h=semHtml()+chips();
   h+="<div class=\"btnrow\"><button class=\"btn\" onclick=\"tf('mform')\">🌅 Check-in</button><button class=\"btn\" onclick=\"tf('fform')\">🍽️ Makra</button></div>";
-  h+="<div class=\"form\" id=\"mform\"><div class=\"grid2\"><div><label>Świeżość</label><select id=\"m-sw\">"+selOpts(5,BOOT.ranoToday&&BOOT.ranoToday.sw?parseInt(BOOT.ranoToday.sw):3)+"</select></div><div><label>Waga kg</label><input id=\"m-waga\" type=\"number\" step=\"0.1\" value=\""+(BOOT.ranoToday?esc(BOOT.ranoToday.waga):"")+"\"></div><div></div></div><label>Ból / sygnał (opcjonalnie)</label><textarea id=\"m-bol\" placeholder=\"np. łydka lekko ciągnie\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendMorning(this)\">Zapisz poranek</button></div></div>";
-  h+="<div class=\"form\" id=\"fform\"><div class=\"grid2\"><div><label>Kcal</label><input id=\"f-kcal\" type=\"number\"></div><div><label>Białko g</label><input id=\"f-bialko\" type=\"number\"></div><div></div></div><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendFuel(this)\">Zapisz makra</button></div></div>";
+  h+="<div class=\"form\" id=\"mform\"><div class=\"grid2\"><div><label>Świeżość</label><select id=\"m-sw\">"+selOpts(5,BOOT.ranoToday&&BOOT.ranoToday.sw?parseInt(BOOT.ranoToday.sw):3)+"</select></div><div><label>Waga kg</label><input id=\"m-waga\" type=\"number\" inputmode=\"decimal\" step=\"0.1\" value=\""+(BOOT.ranoToday?esc(BOOT.ranoToday.waga):"")+"\"></div><div></div></div><label>Ból / sygnał (opcjonalnie)</label><textarea id=\"m-bol\" placeholder=\"np. łydka lekko ciągnie\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendMorning(this)\">Zapisz poranek</button></div></div>";
+  h+="<div class=\"form\" id=\"fform\"><div class=\"grid2\"><div><label>Kcal</label><input id=\"f-kcal\" type=\"number\" inputmode=\"numeric\"></div><div><label>Białko g</label><input id=\"f-bialko\" type=\"number\" inputmode=\"numeric\"></div><div></div></div><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendFuel(this)\">Zapisz makra</button></div></div>";
   h+="<h2>Dziś</h2>";
+  var logBlock="<div class=\"btnrow\"><button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>"+
+    "<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog(this)\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
   if(today){
     h+=cardHtml(today,false);
     h+=shoeHtml(today.t);
-    h+="<div class=\"btnrow\">"+(today.st.indexOf("✓")===-1?"<button class=\"btn pri\" onclick=\"done('"+today.d+"',this)\">✓ Zrobione</button>":"")+"<button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>";
-    h+="<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog(this)\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
-  } else h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień.</div></div>";
+    if(today.st.indexOf("✓")===-1)h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"done('"+today.d+"',this)\">✓ Zrobione</button></div>";
+    h+=logBlock;
+  } else {
+    h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień. Sesję poza planem możesz i tak zalogować:</div></div>";
+    h+=logBlock;
+  }
   if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false)+shoeHtml(tom.t);
   $("v-dzis").innerHTML=h;
 }
@@ -418,7 +424,12 @@ function renderDziennik(){
 function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote(this)\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
 // ---------- Narzędzia (klienckie kalkulatory) ----------
 function pad2(n){return (n<10?"0":"")+n;}
-function parseMS(s){var p=String(s||"").trim().split(":");if(p.length!==2)return null;var m=parseInt(p[0],10),sec=parseInt(p[1],10);if(isNaN(m)||isNaN(sec))return null;return m*60+sec;}
+function parseMS(s){ // przyjmuje 4:40 · 4.40 · 440 (=4:40) · 4030 (=40:30); waliduje sek 0–59, odrzuca ujemne/4:99
+  s=String(s==null?"":s).trim();if(!s)return null;var m,sec;
+  if(s.indexOf(":")>-1||s.indexOf(".")>-1){var p=s.split(/[:.]/);if(p.length!==2)return null;m=parseInt(p[0],10);sec=parseInt(p[1],10);}
+  else if(/^\d{3,4}$/.test(s)){m=parseInt(s.slice(0,-2),10);sec=parseInt(s.slice(-2),10);}
+  else return null;
+  if(isNaN(m)||isNaN(sec)||m<0||sec<0||sec>=60)return null;return m*60+sec;}
 function fmtMS(sec){sec=Math.round(sec);return Math.floor(sec/60)+":"+pad2(sec%60);}
 function fmtHMS(sec){sec=Math.round(sec);if(sec<3600)return Math.floor(sec/60)+":"+pad2(sec%60);var h=Math.floor(sec/3600);return h+":"+pad2(Math.floor(sec%3600/60))+":"+pad2(sec%60);}
 function round25(x){return Math.round(x/2.5)*2.5;}
@@ -438,13 +449,13 @@ function renderTools(){
   // --- Kalkulator ciężarów ---
   h+="<h2>Kalkulator ciężarów (% z maksów)</h2><div class=\"card\">";
   h+="<label>Bój</label><select id=\"w-lift\" oninput=\"calcW()\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\">"+esc(m.n)+"</option>";}).join("")+"</select>";
-  h+="<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px\"><div><label>%</label><input id=\"w-pct\" type=\"number\" value=\"75\" oninput=\"calcW()\"></div><div><label>Baza 1RM</label><select id=\"w-base\" oninput=\"calcW()\"><option value=\"x\">potwierdzony</option><option value=\"y\">szacowany</option></select></div></div>";
+  h+="<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px\"><div><label>%</label><input id=\"w-pct\" type=\"number\" inputmode=\"numeric\" value=\"75\" oninput=\"calcW()\"></div><div><label>Baza 1RM</label><select id=\"w-base\" oninput=\"calcW()\"><option value=\"x\">potwierdzony</option><option value=\"y\">szacowany</option></select></div></div>";
   h+="<div id=\"w-res\"></div></div>";
   // --- Tempa / VDOT ---
   h+="<h2>Tempa i strefy (VDOT)</h2><div class=\"card\">";
-  h+="<div class=\"ct\">Test biegowy → tempa treningowe</div><div class=\"grid2\"><div><label>Dystans</label><select id=\"p-dist\" oninput=\"calcP()\"><option value=\"3000\">3 km</option><option value=\"5000\" selected>5 km</option><option value=\"8000\">8 km</option><option value=\"10000\">10 km</option></select></div><div><label>Czas mm:ss</label><input id=\"p-time\" value=\"21:25\" oninput=\"calcP()\"></div><div></div></div>";
+  h+="<div class=\"ct\">Test biegowy → tempa treningowe</div><div class=\"grid2\"><div><label>Dystans</label><select id=\"p-dist\" oninput=\"calcP()\"><option value=\"3000\">3 km</option><option value=\"5000\" selected>5 km</option><option value=\"8000\">8 km</option><option value=\"10000\">10 km</option></select></div><div><label>Czas mm:ss</label><input id=\"p-time\" inputmode=\"decimal\" value=\"21:25\" oninput=\"calcP()\"></div><div></div></div>";
   h+="<div id=\"p-res\"></div></div>";
-  h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
+  h+="<div class=\"card\"><div class=\"ct\">Konwerter tempo ↔ m/s (target do Garmina)</div><div class=\"grid2\"><div><label>Tempo /km</label><input id=\"c-pace\" inputmode=\"decimal\" value=\"4:40\" oninput=\"calcC('p')\"></div><div><label>m/s</label><input id=\"c-ms\" inputmode=\"decimal\" value=\"3.57\" oninput=\"calcC('m')\"></div><div></div></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Strefy HR</div><table class=\"ptable\"><tr><th>Strefa</th><th>Tętno</th></tr><tr><td>Z1 regeneracja</td><td>&lt;138</td></tr><tr><td>Z2 easy/long</td><td>138–146</td></tr><tr><td>Z3 tempo</td><td>147–168</td></tr><tr><td>Z4 próg</td><td>169–176</td></tr><tr><td>Z5 VO2</td><td>177–192</td></tr></table><div class=\"sub\" style=\"margin-top:6px\">LT2/LTHR 176 · LT1 ~150 · max 192 · RHR baza 41–44 (rekalibracja 11.07)</div></div>";
   }
   if(TSEC==="e1rm"){
@@ -452,12 +463,12 @@ function renderTools(){
   h+="<h2>e1RM — tracker siły</h2>";
   h+="<div class=\"card\"><div class=\"ct\">Nowe serie <span class=\"sub\">(dzisiejsza sesja — każda seria osobno)</span></div>";
   h+="<div class=\"rc\"><label>Bój</label><select id=\"l-lift\">"+MAKSY.map(function(m,i){return "<option value=\""+i+"\""+(i===LSEL?" selected":"")+">"+esc(m.n)+"</option>";}).join("")+"</select>";
-  h+="<label>Ciężar (kg)</label><input id=\"l-kg\" type=\"number\" step=\"2.5\">";
-  h+="<label>Powtórzenia</label><input id=\"l-r\" type=\"number\" min=\"1\" max=\"15\">";
-  h+="<label>RPE (opcjonalnie)</label><input id=\"l-rpe\" type=\"number\" min=\"5\" max=\"10\" step=\"0.5\"></div>";
-  h+="<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"e1Add()\">+ dodaj serię</button></div>";
+  h+="<label>Ciężar (kg)</label><input id=\"l-kg\" type=\"number\" inputmode=\"decimal\" step=\"2.5\">";
+  h+="<label>Powtórzenia</label><input id=\"l-r\" type=\"number\" inputmode=\"numeric\" min=\"1\" max=\"15\">";
+  h+="<label>RPE (opcjonalnie)</label><input id=\"l-rpe\" type=\"number\" inputmode=\"decimal\" min=\"5\" max=\"10\" step=\"0.5\"></div>";
+  h+="<div class=\"btnrow\"><button class=\"btn\" onclick=\"e1Add()\">+ dodaj serię</button></div>";
   if(LIFT.pend.length){
-    h+="<div style=\"margin-top:8px\">"+LIFT.pend.map(function(p,i){return "<div class=\"chkr\">"+esc(p[1])+": <b>"+p[2]+" kg × "+p[3]+"</b>"+(p[4]?" @RPE "+p[4]:"")+" <span class=\"sub\">e1RM "+e1Of(p[2],p[3])+"</span><span style=\"margin-left:auto;color:var(--mut);cursor:pointer\" onclick=\"e1Del("+i+")\">✕</span></div>";}).join("");
+    h+="<div style=\"margin-top:8px\">"+LIFT.pend.map(function(p,i){return "<div class=\"chkr\">"+esc(p[1])+": <b>"+p[2]+" kg × "+p[3]+"</b>"+(p[4]?" @RPE "+p[4]:"")+" <span class=\"sub\">e1RM "+e1Of(p[2],p[3])+"</span><span style=\"margin-left:auto;color:var(--mut);cursor:pointer;padding:8px 10px;margin:-8px -6px -8px 0\" onclick=\"e1Del("+i+")\">✕</span></div>";}).join("");
     h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"e1Save(this)\">Zapisz "+LIFT.pend.length+" ser. → arkusz</button></div></div>";
   }
   h+="</div>";
@@ -468,7 +479,7 @@ function renderTools(){
   if(TSEC==="race"){
   // --- Race predictor ---
   h+="<h2>Race predictor — Hyrox Solo</h2><div class=\"card\"><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"fillR('teraz')\">teraz</button><button class=\"btn sm\" onclick=\"fillR('cel')\">cel (sub-70)</button></div><div class=\"rc\">";
-  h+=RCOMP.map(function(c){return "<label>"+esc(c.n)+"</label><input id=\"r-"+c.k+"\" value=\""+c.teraz+"\" oninput=\"calcR()\">";}).join("");
+  h+=RCOMP.map(function(c){return "<label>"+esc(c.n)+"</label><input id=\"r-"+c.k+"\" inputmode=\"decimal\" value=\""+c.teraz+"\" oninput=\"calcR()\">";}).join("");
   h+="</div><div id=\"r-res\"></div><div class=\"sub\" style=\"margin-top:8px\">Model orientacyjny (suma splitów) — nie prognoza gwarantowana. Bieg = tempo/km ×8.</div></div>";
   }
   if(TSEC==="stacje"){
@@ -496,9 +507,9 @@ function renderTools(){
   h+="<div class=\"dh\">Stacja</div><div class=\"dh\">Ty %</div><div class=\"dh\">Cel</div>";
   h+=DBLST.map(function(s){var sp=(DBL.s[s.k]!=null?DBL.s[s.k]:s.split),tv=DBL.t[s.k]||s.t;
     return "<div><div style=\"font-weight:600\">"+esc(s.n)+"</div><div class=\"sub\">"+esc(s.spec)+"</div></div>"+
-      "<input id=\"d-s-"+s.k+"\" type=\"number\" min=\"0\" max=\"100\" value=\""+sp+"\" oninput=\"calcDbl()\">"+
-      "<input id=\"d-t-"+s.k+"\" value=\""+esc(tv)+"\" oninput=\"calcDbl()\">";}).join("");
-  h+="</div><div class=\"rc\"><label>Bieg 8×1 km razem (tempo /km)</label><input id=\"d-pace\" value=\""+esc(DBL.pace)+"\" oninput=\"calcDbl()\"><label>Roxzone (8 przejść + zmiany)</label><input id=\"d-rox\" value=\""+esc(DBL.rox)+"\" oninput=\"calcDbl()\"></div>";
+      "<input id=\"d-s-"+s.k+"\" type=\"number\" inputmode=\"numeric\" min=\"0\" max=\"100\" value=\""+sp+"\" oninput=\"calcDbl()\">"+
+      "<input id=\"d-t-"+s.k+"\" inputmode=\"decimal\" value=\""+esc(tv)+"\" oninput=\"calcDbl()\">";}).join("");
+  h+="</div><div class=\"rc\"><label>Bieg 8×1 km razem (tempo /km)</label><input id=\"d-pace\" inputmode=\"decimal\" value=\""+esc(DBL.pace)+"\" oninput=\"calcDbl()\"><label>Roxzone (8 przejść + zmiany)</label><input id=\"d-rox\" inputmode=\"decimal\" value=\""+esc(DBL.rox)+"\" oninput=\"calcDbl()\"></div>";
   h+="<div id=\"d-res\"></div><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"dblReset()\">reset szkicu</button><button class=\"btn pri sm\" onclick=\"dblSend(this)\">Wyślij plan do Inboxu</button></div>";
   h+="<div class=\"sub\" style=\"margin-top:8px\">Szkic — kalibracja przy 1. wspólnej sesji doubles (symulacja 1, do ~12–13.09); strategia dogrywana w F4. Zmiany zapisują się na telefonie.</div></div>";
   }
@@ -509,7 +520,7 @@ function renderTools(){
   var dd=Math.ceil((new Date(R.d+"T00:00:00")-new Date())/864e5);
   h+="<div class=\"card\"><div class=\"res\">"+(dd>0?dd+" dni <span class=\"u\">do startu</span>":(dd===0?"DZIŚ! 🏁":"po starcie"))+"</div><div class=\"sub\">"+esc(R.n)+" · "+esc(R.d)+" · cel <b>"+esc(R.cel)+"</b></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Dane startu <span class=\"sub\">(uzupełnij, gdy przyjdą — zapisują się na telefonie)</span></div><div class=\"rc\">"+
-    "<label>Godzina startu (HH:MM)</label><input id=\"st-time\" value=\""+esc(CS.time)+"\" placeholder=\"10:30\" oninput=\"startInp()\">"+
+    "<label>Godzina startu</label><input id=\"st-time\" type=\"time\" value=\""+esc(CS.time)+"\" oninput=\"startInp()\">"+
     "<label>Wave / pas</label><input id=\"st-wave\" value=\""+esc(CS.wave)+"\" oninput=\"startInp()\">"+
     "<label>Nr startowy</label><input id=\"st-nr\" value=\""+esc(CS.nr)+"\" oninput=\"startInp()\"></div></div>";
   h+="<div class=\"card\"><div class=\"ct\">Timeline dnia</div><div id=\"st-tl\"></div></div>";
@@ -558,7 +569,7 @@ function calcDbl(){
   $("d-res").innerHTML="<div class=\"res\">"+fmtMS(sum)+" <span class=\"u\">/ cel 60:00 · "+(d>=0?"bufor":"BRAKUJE")+" <span class=\""+cls+"\">"+fmtMS(Math.abs(d))+"</span></span></div>"+
     "<div class=\"sub\">bieg "+fmtMS(pc*8)+" · stacje "+fmtMS(sum-pc*8-rx)+" · roxzone "+fmtMS(rx)+"</div>";
 }
-function dblReset(){DBL={pace:"4:12",rox:"2:30",s:{},t:{}};dblSave();renderTools();}
+function dblReset(){if(!confirm("Wyzerować szkic doubles? Podział stacji i cele wrócą do domyślnych."))return;DBL={pace:"4:12",rox:"2:30",s:{},t:{}};dblSave();renderTools();}
 function dblSend(b){
   var L=["Plan doubles Mix 15.10 (szkic z apki):","Bieg razem "+DBL.pace+"/km · roxzone "+DBL.rox];
   DBLST.forEach(function(s){L.push(s.n+": ja "+(DBL.s[s.k]!=null?DBL.s[s.k]:s.split)+"% / partnerka "+(100-(DBL.s[s.k]!=null?DBL.s[s.k]:s.split))+"% · cel "+(DBL.t[s.k]||s.t));});
@@ -637,7 +648,7 @@ function tmrRender(){
 function tmrTick(){var el=$("tm-clk");if(!el||!TMR.t0||TMR.laps.length>=SIMSEG.length)return;var base=TMR.laps.length?TMR.laps[TMR.laps.length-1]:TMR.t0;el.textContent=fmtHMS((Date.now()-base)/1000);}
 setInterval(tmrTick,250);
 function tmrStart(){TMR={t0:Date.now(),laps:[]};tmrSave();tmrRender();}
-function tmrLap(){TMR.laps.push(Date.now());tmrSave();tmrRender();if(TMR.laps.length>=SIMSEG.length)toast("Meta! Sprawdź splity");}
+function tmrLap(){var now=Date.now();var prev=TMR.laps.length?TMR.laps[TMR.laps.length-1]:TMR.t0;if(prev&&now-prev<3000){toast("Za szybko — okrążenie zignorowane (min 3 s)");return;}TMR.laps.push(now);tmrSave();tmrRender();if(TMR.laps.length>=SIMSEG.length)toast("Meta! Sprawdź splity");}
 function tmrReset(){if(!confirm("Wyzerować timer symulacji?"))return;TMR={t0:null,laps:[]};tmrSave();tmrRender();}
 function tmrSend(b){
   var sp=tmrSplits(),tot=(TMR.laps[TMR.laps.length-1]-TMR.t0)/1000;
