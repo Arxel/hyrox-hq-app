@@ -227,6 +227,8 @@ var DBL={pace:"4:12",rox:"2:30",s:{},t:{}};
 try{var _d=JSON.parse(localStorage.getItem("hx_dbl")||"null");if(_d&&_d.s)DBL=_d;}catch(e){}
 // #12 e1RM — serie do zapisu (pend) + wybrany bój trendu
 var LIFT={pend:[]},LSEL=0;
+try{var _l=JSON.parse(localStorage.getItem("hx_lift")||"null");if(_l&&Array.isArray(_l.pend))LIFT=_l;}catch(e){} // F3: serie przeżywają ubicie apki
+function liftSave(){try{localStorage.setItem("hx_lift",JSON.stringify(LIFT));}catch(e){}}
 // #27 Strona startu — starty sezonu + timeline z playbooka (offsety w min od startu) + checklisty
 var RACES={mix:{n:"Hyrox Mix",d:"2026-10-15",cel:"sub-60"},solo:{n:"Hyrox Solo",d:"2026-11-20",cel:"sub-70 (A-cel)"}};
 var STL=[[-195,"Pobudka (3+ h przed)"],[-180,"Śniadanie — znane, węglowodanowe"],[-90,"Na miejscu / odbiór pakietu"],[-40,"Kofeina (~250–330 mg, dawka przetestowana)"],[-35,"Rozgrzewka: trucht → mobilność → przebieżki → WB/erg"],[-10,"Strefa startowa — sekwencja w głowie"],[0,"START"]];
@@ -236,12 +238,18 @@ try{var _st=JSON.parse(localStorage.getItem("hx_start")||"null");if(_st&&_st.mix
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function $(id){return document.getElementById(id);}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
-function post(body,cb){
+function post(body,cb,opts){
+  opts=opts||{};var btn=opts.btn,ot;
+  if(btn){if(btn.disabled)return;ot=btn.textContent;btn.disabled=true;btn.textContent="…";} // F2: blokada podwójnego tapnięcia
+  var fin=function(){if(btn){btn.disabled=false;btn.textContent=ot;}};
+  var ctrl=("AbortController" in window)?new AbortController():null; // F1: twardy timeout
+  var to=setTimeout(function(){if(ctrl)ctrl.abort();},15000);
   fetch(EXEC,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify(Object.assign({token:TOKEN},body))})
+    body:JSON.stringify(Object.assign({token:TOKEN},body)),signal:ctrl?ctrl.signal:undefined})
   .then(function(r){return r.json();})
-  .then(function(r){if(r&&r.ok===false){toast("Błąd: "+r.error);}else{cb&&cb(r);}})
-  .catch(function(e){toast("Błąd sieci: "+e.message);});
+  .then(function(r){if(r&&r.ok===false){toast("Błąd: "+r.error);opts.onErr&&opts.onErr(r.error);}else{cb&&cb(r);}})
+  .catch(function(e){var m=(e&&e.name==="AbortError")?"przekroczono czas — sprawdź sieć":((e&&e.message)||"brak połączenia");toast("Błąd sieci: "+m);opts.onErr&&opts.onErr(m);})
+  .then(function(){clearTimeout(to);fin();});
 }
 var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
   apiQuickLog:function(a){return Object.assign({app:"quicklog"},a);},
@@ -249,12 +257,17 @@ var OPS={apiCheckDone:function(a){return{app:"done",date:a};},
   apiLift:function(a){return{app:"lift",rows:a};},
   apiMorning:function(a){return Object.assign({app:"morning"},a);},
   apiFuel:function(a){return Object.assign({app:"fuel"},a);}};
-function run(fn,arg,cb){post(OPS[fn](arg),cb);}
+function run(fn,arg,cb,btn){post(OPS[fn](arg),cb,{btn:btn});}
 function boot(){
-  if(window.__BOOT){BOOT=window.__BOOT;window.__BOOT=null;$("splash").style.display="none";renderAll();return;} // fallback SPA: boot z serwera (odśwież → normalny fetch)
   if(!TOKEN){tokenForm();return;}
   $("splash").style.display="block";$("splash").textContent="Ładowanie…";
-  post({app:"boot"},function(r){BOOT=r.boot;$("splash").style.display="none";renderAll();});
+  post({app:"boot"},function(r){BOOT=r.boot;try{localStorage.setItem("hx_boot",JSON.stringify(r.boot));}catch(e){}$("splash").style.display="none";renderAll();},
+    {onErr:bootFail});
+}
+function bootFail(){ // F1: nie zostawiaj wiecznego „Ładowanie…"
+  var cached=null;try{cached=JSON.parse(localStorage.getItem("hx_boot")||"null");}catch(e){}
+  if(cached){BOOT=cached;$("splash").style.display="none";renderAll();toast("Brak sieci — dane z ostatniego pobrania");return;}
+  $("splash").innerHTML='<div class="card" style="max-width:420px;margin:10px auto;text-align:left"><div class="t">Nie udało się pobrać danych</div><div class="x" style="margin:6px 0 10px">Sprawdź połączenie i spróbuj ponownie. Jeśli zmieniono token — wpisz nowy.</div><div class="btnrow"><button class="btn pri" onclick="boot()">Spróbuj ponownie</button><button class="btn" onclick="tokenForm()">Zmień token</button></div></div>';
 }
 function tokenForm(){
   $("splash").style.display="block";
@@ -276,7 +289,7 @@ function saveTok(){
 function dd(iso){return Math.ceil((new Date(iso+"T00:00:00")-new Date(BOOT.today+"T00:00:00"))/86400000);}
 function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
 function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
-function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"')\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
+function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"done('"+p.d+"',this)\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
 function classifySess(t){t=(t||"").toLowerCase();
   if(/trail|gór|gor|teren/.test(t))return "trail";
   if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym";
@@ -307,14 +320,14 @@ function renderDzis(){
   var tom=BOOT.plan.find(function(p){return p.d>BOOT.today;});
   var h=semHtml()+chips();
   h+="<div class=\"btnrow\"><button class=\"btn\" onclick=\"tf('mform')\">🌅 Check-in</button><button class=\"btn\" onclick=\"tf('fform')\">🍽️ Makra</button></div>";
-  h+="<div class=\"form\" id=\"mform\"><div class=\"grid2\"><div><label>Świeżość</label><select id=\"m-sw\">"+selOpts(5,BOOT.ranoToday&&BOOT.ranoToday.sw?parseInt(BOOT.ranoToday.sw):3)+"</select></div><div><label>Waga kg</label><input id=\"m-waga\" type=\"number\" step=\"0.1\" value=\""+(BOOT.ranoToday?esc(BOOT.ranoToday.waga):"")+"\"></div><div></div></div><label>Ból / sygnał (opcjonalnie)</label><textarea id=\"m-bol\" placeholder=\"np. łydka lekko ciągnie\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendMorning()\">Zapisz poranek</button></div></div>";
-  h+="<div class=\"form\" id=\"fform\"><div class=\"grid2\"><div><label>Kcal</label><input id=\"f-kcal\" type=\"number\"></div><div><label>Białko g</label><input id=\"f-bialko\" type=\"number\"></div><div></div></div><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendFuel()\">Zapisz makra</button></div></div>";
+  h+="<div class=\"form\" id=\"mform\"><div class=\"grid2\"><div><label>Świeżość</label><select id=\"m-sw\">"+selOpts(5,BOOT.ranoToday&&BOOT.ranoToday.sw?parseInt(BOOT.ranoToday.sw):3)+"</select></div><div><label>Waga kg</label><input id=\"m-waga\" type=\"number\" step=\"0.1\" value=\""+(BOOT.ranoToday?esc(BOOT.ranoToday.waga):"")+"\"></div><div></div></div><label>Ból / sygnał (opcjonalnie)</label><textarea id=\"m-bol\" placeholder=\"np. łydka lekko ciągnie\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendMorning(this)\">Zapisz poranek</button></div></div>";
+  h+="<div class=\"form\" id=\"fform\"><div class=\"grid2\"><div><label>Kcal</label><input id=\"f-kcal\" type=\"number\"></div><div><label>Białko g</label><input id=\"f-bialko\" type=\"number\"></div><div></div></div><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendFuel(this)\">Zapisz makra</button></div></div>";
   h+="<h2>Dziś</h2>";
   if(today){
     h+=cardHtml(today,false);
     h+=shoeHtml(today.t);
-    h+="<div class=\"btnrow\">"+(today.st.indexOf("✓")===-1?"<button class=\"btn pri\" onclick=\"done('"+today.d+"')\">✓ Zrobione</button>":"")+"<button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>";
-    h+="<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog()\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
+    h+="<div class=\"btnrow\">"+(today.st.indexOf("✓")===-1?"<button class=\"btn pri\" onclick=\"done('"+today.d+"',this)\">✓ Zrobione</button>":"")+"<button class=\"btn\" onclick=\"tf('logform')\">📝 Zaloguj sesję</button></div>";
+    h+="<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog(this)\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
   } else h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień.</div></div>";
   if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false)+shoeHtml(tom.t);
   $("v-dzis").innerHTML=h;
@@ -392,7 +405,7 @@ function renderDziennik(){
   h+=rows.map(function(e){var m=[e.dist?e.dist+" km":"",e.czas,e.tempo?e.tempo+"/km":"",e.hr?"HR "+e.hr:"",e.rpe?"RPE "+e.rpe:""].filter(Boolean).join(" · ");return "<div class=\"entry\"><div class=\"eh\"><span>"+esc(e.d)+" · "+esc(e.typ)+"</span><span>św "+esc(e.sw)+"</span></div>"+(m?"<div class=\"em\">"+esc(m)+"</div>":"")+(e.nota?"<div class=\"x\">"+esc(e.nota)+"</div>":"")+(e.werdykt?"<div class=\"ev\">"+esc(e.werdykt)+"</div>":"")+"</div>";}).join("");
   $("v-dziennik").innerHTML=h;
 }
-function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote()\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
+function renderNote(){var h="<h2>Notatka dla Claude'a</h2><div class=\"card\"><textarea id=\"n-txt\" style=\"width:100%;min-height:80px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px\" placeholder=\"np. łydka strzelała na podbiegach; przełóż jakość…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendNote(this)\">Wyślij do inboxu</button></div></div>";h+="<h2>Ostatnie</h2>"+(BOOT.inbox.length?BOOT.inbox.map(function(n){return "<div class=\"note "+(n.s==="nowa"?"nowa":"")+"\"><div class=\"m\">"+esc(n.w)+" · "+esc(n.t)+" · "+esc(n.s)+"</div>"+esc(n.x)+"</div>";}).join(""):"<div class=\"sub\">pusto</div>");$("v-note").innerHTML=h;}
 // ---------- Narzędzia (klienckie kalkulatory) ----------
 function pad2(n){return (n<10?"0":"")+n;}
 function parseMS(s){var p=String(s||"").trim().split(":");if(p.length!==2)return null;var m=parseInt(p[0],10),sec=parseInt(p[1],10);if(isNaN(m)||isNaN(sec))return null;return m*60+sec;}
@@ -435,7 +448,7 @@ function renderTools(){
   h+="<div class=\"btnrow\"><button class=\"btn sm\" onclick=\"e1Add()\">+ dodaj serię</button></div>";
   if(LIFT.pend.length){
     h+="<div style=\"margin-top:8px\">"+LIFT.pend.map(function(p,i){return "<div class=\"chkr\">"+esc(p[1])+": <b>"+p[2]+" kg × "+p[3]+"</b>"+(p[4]?" @RPE "+p[4]:"")+" <span class=\"sub\">e1RM "+e1Of(p[2],p[3])+"</span><span style=\"margin-left:auto;color:var(--mut);cursor:pointer\" onclick=\"e1Del("+i+")\">✕</span></div>";}).join("");
-    h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"e1Save()\">Zapisz "+LIFT.pend.length+" ser. → arkusz</button></div></div>";
+    h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"e1Save(this)\">Zapisz "+LIFT.pend.length+" ser. → arkusz</button></div></div>";
   }
   h+="</div>";
   h+="<div class=\"card\"><div class=\"ct\">Trend <span class=\"sub\">(e1RM Epley = kg × (1 + powt/30) · najlepsza seria dnia)</span></div>";
@@ -475,7 +488,7 @@ function renderTools(){
       "<input id=\"d-s-"+s.k+"\" type=\"number\" min=\"0\" max=\"100\" value=\""+sp+"\" oninput=\"calcDbl()\">"+
       "<input id=\"d-t-"+s.k+"\" value=\""+esc(tv)+"\" oninput=\"calcDbl()\">";}).join("");
   h+="</div><div class=\"rc\"><label>Bieg 8×1 km razem (tempo /km)</label><input id=\"d-pace\" value=\""+esc(DBL.pace)+"\" oninput=\"calcDbl()\"><label>Roxzone (8 przejść + zmiany)</label><input id=\"d-rox\" value=\""+esc(DBL.rox)+"\" oninput=\"calcDbl()\"></div>";
-  h+="<div id=\"d-res\"></div><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"dblReset()\">reset szkicu</button><button class=\"btn pri sm\" onclick=\"dblSend()\">Wyślij plan do Inboxu</button></div>";
+  h+="<div id=\"d-res\"></div><div class=\"btnrow\"><button class=\"btn sm\" onclick=\"dblReset()\">reset szkicu</button><button class=\"btn pri sm\" onclick=\"dblSend(this)\">Wyślij plan do Inboxu</button></div>";
   h+="<div class=\"sub\" style=\"margin-top:8px\">Szkic — kalibracja przy 1. wspólnej sesji doubles (symulacja 1, do ~12–13.09); strategia dogrywana w F4. Zmiany zapisują się na telefonie.</div></div>";
   }
   if(TSEC==="start"){
@@ -535,26 +548,26 @@ function calcDbl(){
     "<div class=\"sub\">bieg "+fmtMS(pc*8)+" · stacje "+fmtMS(sum-pc*8-rx)+" · roxzone "+fmtMS(rx)+"</div>";
 }
 function dblReset(){DBL={pace:"4:12",rox:"2:30",s:{},t:{}};dblSave();renderTools();}
-function dblSend(){
+function dblSend(b){
   var L=["Plan doubles Mix 15.10 (szkic z apki):","Bieg razem "+DBL.pace+"/km · roxzone "+DBL.rox];
   DBLST.forEach(function(s){L.push(s.n+": ja "+(DBL.s[s.k]!=null?DBL.s[s.k]:s.split)+"% / partnerka "+(100-(DBL.s[s.k]!=null?DBL.s[s.k]:s.split))+"% · cel "+(DBL.t[s.k]||s.t));});
-  run("apiNote",L.join("\n"),function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:L.join("\n"),s:"nowa"});toast("Plan w Inboxie — Claude przetworzy");});
+  run("apiNote",L.join("\n"),function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:L.join("\n"),s:"nowa"});renderNote();toast("Plan w Inboxie — Claude przetworzy");},b);
 }
 // ---------- #12 e1RM ----------
 function e1Of(kg,r){kg=parseFloat(kg);r=parseInt(r,10);if(!kg||!r)return "—";return Math.round(r===1?kg:kg*(1+r/30));}
 function e1Add(){
   var i=parseInt($("l-lift").value,10),kg=$("l-kg").value,r=$("l-r").value,rpe=$("l-rpe").value;
   if(!parseFloat(kg)||!parseInt(r,10)){toast("Podaj kg i powtórzenia");return;}
-  LSEL=i;LIFT.pend.push([BOOT.today,MAKSY[i].n,parseFloat(kg),parseInt(r,10),rpe||"","apka"]);renderTools();
+  LSEL=i;LIFT.pend.push([BOOT.today,MAKSY[i].n,parseFloat(kg),parseInt(r,10),rpe||"","apka"]);liftSave();renderTools();
 }
-function e1Del(i){LIFT.pend.splice(i,1);renderTools();}
-function e1Save(){
+function e1Del(i){LIFT.pend.splice(i,1);liftSave();renderTools();}
+function e1Save(b){
   var rows=LIFT.pend.slice();
   run("apiLift",rows,function(){
     if(!BOOT.sila)BOOT.sila=[];
     rows.forEach(function(p){BOOT.sila.push({d:p[0],b:p[1],kg:p[2],r:p[3],rpe:p[4]});});
-    LIFT.pend=[];renderTools();toast(rows.length+" ser. w arkuszu (Siła)");
-  });
+    LIFT.pend=[];liftSave();renderTools();toast(rows.length+" ser. w arkuszu (Siła)");
+  },b);
 }
 function e1Trend(){
   if(!BOOT.sila)return "<div class=\"sub\">Historia pojawi się po wdrożeniu backendu v11 (zakładka Siła w arkuszu).</div>";
@@ -602,7 +615,7 @@ function tmrRender(){
   if(n>=SIMSEG.length){
     var sp=tmrSplits(),tot=(TMR.laps[n-1]-TMR.t0)/1000;
     var rows=SIMSEG.map(function(s,i){return "<tr><td>"+esc(s.n)+"</td><td>"+fmtMS(sp[i])+"</td><td>"+esc(s.t)+"</td><td>"+tmrDelta(sp[i],s.t)+"</td></tr>";}).join("");
-    box.innerHTML="<div class=\"clk\">"+fmtHMS(tot)+"</div><div class=\"segt\">symulacja zakończona — "+tmrDelta(tot,"70:00")+" vs 70:00</div><table class=\"ptable\"><tr><th>Segment</th><th>Czas</th><th>Cel</th><th>Δ</th></tr>"+rows+"</table><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"tmrSend()\">Wyślij do Inboxu</button><button class=\"btn\" onclick=\"tmrReset()\">Reset</button></div>";
+    box.innerHTML="<div class=\"clk\">"+fmtHMS(tot)+"</div><div class=\"segt\">symulacja zakończona — "+tmrDelta(tot,"70:00")+" vs 70:00</div><table class=\"ptable\"><tr><th>Segment</th><th>Czas</th><th>Cel</th><th>Δ</th></tr>"+rows+"</table><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"tmrSend(this)\">Wyślij do Inboxu</button><button class=\"btn\" onclick=\"tmrReset()\">Reset</button></div>";
     return;
   }
   var seg=SIMSEG[n];
@@ -615,24 +628,24 @@ setInterval(tmrTick,250);
 function tmrStart(){TMR={t0:Date.now(),laps:[]};tmrSave();tmrRender();}
 function tmrLap(){TMR.laps.push(Date.now());tmrSave();tmrRender();if(TMR.laps.length>=SIMSEG.length)toast("Meta! Sprawdź splity");}
 function tmrReset(){if(!confirm("Wyzerować timer symulacji?"))return;TMR={t0:null,laps:[]};tmrSave();tmrRender();}
-function tmrSend(){
+function tmrSend(b){
   var sp=tmrSplits(),tot=(TMR.laps[TMR.laps.length-1]-TMR.t0)/1000;
   var txt="Symulacja (timer apki) "+BOOT.today+": TOTAL "+fmtHMS(tot)+" | "+SIMSEG.map(function(s,i){return s.n+" "+fmtMS(sp[i])+" (cel "+s.t+")";}).join(" | ");
-  run("apiNote",txt,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:txt,s:"nowa"});renderNote();toast("Wynik w Inboxie — Claude przetworzy");});
+  run("apiNote",txt,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:txt,s:"nowa"});renderNote();toast("Wynik w Inboxie — Claude przetworzy");},b);
 }
 function calcW(){var m=MAKSY[+$("w-lift").value],pct=parseFloat($("w-pct").value),base=$("w-base").value,rm=base==="y"?m.y:m.x;var res=$("w-res");if(isNaN(pct)||pct<=0){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj %</div>";return;}var kg=round25(rm*pct/100);var note=(base==="x"&&m.y>m.x)?" <span class=\"sub\">(szac. sufit "+m.y+")</span>":"";var tbl="<table class=\"ptable\"><tr><th>%</th><th>kg</th></tr>"+[60,65,70,75,80,85,90,95].map(function(p){return "<tr><td>"+p+"%</td><td>"+round25(rm*p/100)+"</td></tr>";}).join("")+"</table>";res.innerHTML="<div class=\"res\">"+kg+" kg <span class=\"u\">= "+pct+"% z "+rm+" kg"+note+"</span></div>"+tbl;}
 function calcP(){var dist=+$("p-dist").value,t=parseMS($("p-time").value),res=$("p-res");if(t==null){res.innerHTML="<div class=\"sub\" style=\"margin-top:8px\">podaj czas mm:ss</div>";return;}var vd=vdotFrom(dist,t);var zones=[["E — easy/long",0.70],["M — maraton/tempo ciągłe",0.84],["T — próg",0.88],["I — interwały VO2",0.975],["R — reps/szybkość",1.05]];var rows=zones.map(function(z){var v=velFromPct(vd,z[1]),pace=1000/v,ms=v/60;return "<tr><td>"+z[0]+"</td><td>"+fmtMS(pace*60)+"</td><td>"+ms.toFixed(2)+"</td></tr>";}).join("");res.innerHTML="<div class=\"res\">VDOT "+vd.toFixed(1)+"</div><table class=\"ptable\"><tr><th>Intensywność</th><th>/km</th><th>m/s</th></tr>"+rows+"</table>";}
 function calcC(from){var pe=$("c-pace"),me=$("c-ms");if(from==='p'){var s=parseMS(pe.value);if(s==null||s<=0)return;me.value=(1000/s).toFixed(2);}else{var v=parseFloat(String(me.value).replace(',','.'));if(isNaN(v)||v<=0)return;pe.value=fmtMS(1000/v);}}
 function fillR(preset){RCOMP.forEach(function(c){var el=$("r-"+c.k);if(el)el.value=c[preset];});calcR();}
-function calcR(){var run=parseMS($("r-run").value),bad=(run==null);var runSec=run==null?0:run*8,stSec=0;RCOMP.forEach(function(c){if(c.run)return;var s=parseMS($("r-"+c.k).value);if(s==null){bad=true;return;}stSec+=s;});var res=$("r-res");if(bad){res.innerHTML="<div class=\"rtot\"><span class=\"sub\">uzupełnij pola mm:ss</span></div>";return;}var tot=runSec+stSec,lvl=tot<4200?0:(tot<4439?1:2);var vsG=tot-4200,vsPB=tot-4439;function sg(x){return (x>0?"+":"")+fmtMS(Math.abs(x));}res.innerHTML="<div class=\"rtot\"><span class=\"big l"+lvl+"\">"+fmtHMS(tot)+"</span><span class=\"sub\">bieg "+fmtHMS(runSec)+" · stacje+rox "+fmtHMS(stSec)+"</span></div><table class=\"ptable\"><tr><td>vs cel Solo sub-70 (1:10:00)</td><td>"+sg(vsG)+"</td></tr><tr><td>vs PB czysto (1:13:59)</td><td>"+sg(vsPB)+"</td></tr></table>";}
+function calcR(){var run=parseMS($("r-run").value),bad=(run==null);var runSec=run==null?0:run*8,stSec=0;RCOMP.forEach(function(c){if(c.run)return;var s=parseMS($("r-"+c.k).value);if(s==null){bad=true;return;}stSec+=s;});var res=$("r-res");if(bad){res.innerHTML="<div class=\"rtot\"><span class=\"sub\">uzupełnij pola mm:ss</span></div>";return;}var tot=runSec+stSec,lvl=tot<4200?0:(tot<4439?1:2);var vsG=tot-4200,vsPB=tot-4439;function sg(x){return (x>0?"+":x<0?"−":"")+fmtMS(Math.abs(x));}res.innerHTML="<div class=\"rtot\"><span class=\"big l"+lvl+"\">"+fmtHMS(tot)+"</span><span class=\"sub\">bieg "+fmtHMS(runSec)+" · stacje+rox "+fmtHMS(stSec)+"</span></div><table class=\"ptable\"><tr><td>vs cel Solo sub-70 (1:10:00)</td><td>"+sg(vsG)+"</td></tr><tr><td>vs PB czysto (1:13:59)</td><td>"+sg(vsPB)+"</td></tr></table>";}
 function renderAll(){$("stan").textContent="stan na "+BOOT.today;renderDzis();renderTydz();renderAnaliza();renderDziennik();renderNote();renderTools();}
 function tf(id){$(id).classList.toggle("open");}
 function setFilter(f){FILTER=f;renderDziennik();}
-function done(d){run("apiCheckDone",d,function(){BOOT.plan.forEach(function(p){if(p.d===d)p.st="✓";});BOOT.adh.weekDone++;renderAll();toast("Odhaczone ✓");});}
-function sendLog(){var o={day:$("l-day").value,rpe:$("l-rpe").value,sw:$("l-sw").value,note:$("l-note").value};var t=BOOT.plan.find(function(p){return p.d===BOOT.today;});if(t)o.session=t.t;run("apiQuickLog",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"log",x:r.txt,s:"nowa"});renderNote();toast("Zapisane — Claude przetworzy");});}
-function sendNote(){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");return;}run("apiNote",t,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:t,s:"nowa"});renderNote();toast("W inboxie");});}
-function sendMorning(){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");});}
-function sendFuel(){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");});}
+function done(d,b){run("apiCheckDone",d,function(){BOOT.plan.forEach(function(p){if(p.d===d)p.st="✓";});BOOT.adh.weekDone++;renderAll();toast("Odhaczone ✓");},b);}
+function sendLog(b){var o={day:$("l-day").value,rpe:$("l-rpe").value,sw:$("l-sw").value,note:$("l-note").value};var t=BOOT.plan.find(function(p){return p.d===BOOT.today;});if(t)o.session=t.t;run("apiQuickLog",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"log",x:r.txt,s:"nowa"});renderNote();toast("Zapisane — Claude przetworzy");},b);}
+function sendNote(b){var t=$("n-txt").value;if(!t.trim()){toast("Pusta notatka");return;}run("apiNote",t,function(){BOOT.inbox.unshift({w:"teraz",t:"notatka",x:t,s:"nowa"});renderNote();toast("W inboxie");},b);}
+function sendMorning(b){var o={sw:$("m-sw").value,waga:$("m-waga").value,bol:$("m-bol").value};run("apiMorning",o,function(){toast("Poranek zapisany");},b);}
+function sendFuel(b){var o={kcal:$("f-kcal").value,bialko:$("f-bialko").value};run("apiFuel",o,function(r){BOOT.inbox.unshift({w:"teraz",t:"makra",x:r.txt,s:"nowa"});toast("Makra zapisane");},b);}
 document.querySelectorAll(".tab").forEach(function(tb){tb.onclick=function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});tb.classList.add("on");$("v-"+tb.dataset.v).classList.add("on");window.scrollTo(0,0);};});
 // Stopka: zwykłe position:fixed;bottom:0 (patrz CSS .tabs) — bez gimnastyki z visualViewport.
 // Podskakiwanie na przełączeniu zakładek brało się z listenerów vv.scroll/resize; a „powiększanie"
