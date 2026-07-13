@@ -172,7 +172,7 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 <div class="toast" id="toast"></div>
 <script>
 var EXEC="https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
-var FRONT_VER="2026-07-13.1"; // #wersja — podbijać przy każdym deployu Pages
+var FRONT_VER="2026-07-13.2"; // #wersja — podbijać przy każdym deployu Pages
 // __TOKEN/__BOOT wstrzykuje fallback SPA w Apps Script (GET ?k=) — ten sam plik służy obu frontom
 var TOKEN=(window.__TOKEN||(location.hash||"").replace(/^#k?=?/,"").trim());
 if(TOKEN){try{localStorage.setItem("hx_token",TOKEN);}catch(e){}}
@@ -304,9 +304,9 @@ function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
 function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
 function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn\" onclick=\"done('"+p.d+"',this)\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
 function classifySess(t){t=(t||"").toLowerCase();
-  if(/trail|gór|gor|teren/.test(t))return "trail";
-  if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym";
-  if(/(próg|prog|tempo|vo2|podbieg|interw|rytm|5 ?km|10 ?km|ostr|wyścig|wyscig|start|symulac|zawody)/.test(t))return "plate";
+  if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym"; // gym PRZED trail — "(góra/push)" łapało /gór/ → Hoka na siłę (bug z notatki 13.07)
+  if(/(próg|prog|tempo|vo2|podbieg|interw|rytm|5 ?km|10 ?km|ostr|wyścig|wyscig|start|symulac|zawody)/.test(t))return "plate"; // plate PRZED trail — "pod górkę" w podbiegach
+  if(/trail|szlak|teren|górsk|gorsk/.test(t))return "trail";
   return "daily";
 }
 function shoeFor(t){
