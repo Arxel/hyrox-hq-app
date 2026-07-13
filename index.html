@@ -172,7 +172,7 @@ background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-
 <div class="toast" id="toast"></div>
 <script>
 var EXEC="https://script.google.com/macros/s/AKfycbyeQNYnz_yVPC-_5v2lqRpbfSBQ0idjlvciHKd7865a14j6TabvmAsIT2sFgl0cEzbF/exec";
-var FRONT_VER="2026-07-13.2"; // #wersja — podbijać przy każdym deployu Pages
+var FRONT_VER="2026-07-13.3"; // #wersja — podbijać przy każdym deployu Pages
 // __TOKEN/__BOOT wstrzykuje fallback SPA w Apps Script (GET ?k=) — ten sam plik służy obu frontom
 var TOKEN=(window.__TOKEN||(location.hash||"").replace(/^#k?=?/,"").trim());
 if(TOKEN){try{localStorage.setItem("hx_token",TOKEN);}catch(e){}}
@@ -304,28 +304,30 @@ function day(s){return new Date(s+"T00:00:00").getTime()/86400000;}
 function chips(){return "<div class=\"chips\">"+BOOT.races.map(function(r){return "<span class=\"chip\">"+esc(r.n)+" "+r.d.slice(5).replace("-",".")+" · <b>za "+dd(r.d)+" dni</b></span>";}).join("")+"</div>";}
 function cardHtml(p,withBtn){var cls="card";if(p.d===BOOT.today)cls+=" today";else if(p.d<BOOT.today)cls+=" past";var btn=(withBtn&&p.st.indexOf("✓")===-1&&p.d<=BOOT.today)?"<div class=\"btnrow\"><button class=\"btn\" onclick=\"done('"+p.d+"',this)\">✓ zrobione</button></div>":"";var xr=String(p.x||""),coach="",m=xr.split(/Komentarz od trenera:/i);if(m.length>1){xr=m[0].trim();coach="<div class=\"coach\"><div class=\"ch\">🔥 Trener</div>"+esc(m.slice(1).join("Komentarz od trenera:").trim())+"</div>";}return "<div class=\""+cls+"\">"+(p.st?"<span class=\"st\">"+esc(p.st)+"</span>":"")+"<div class=\"d\">"+esc(p.d)+" · "+esc(p.day)+"</div><div class=\"t\">"+esc(p.t)+"</div><div class=\"x\">"+esc(xr)+"</div>"+coach+btn+"</div>";}
 function classifySess(t){t=(t||"").toLowerCase();
-  if(/(box|sił|sil|wod|amrap|metcon|strength)/.test(t))return "gym"; // gym PRZED trail — "(góra/push)" łapało /gór/ → Hoka na siłę (bug z notatki 13.07)
-  if(/(próg|prog|tempo|vo2|podbieg|interw|rytm|5 ?km|10 ?km|ostr|wyścig|wyscig|start|symulac|zawody)/.test(t))return "plate"; // plate PRZED trail — "pod górkę" w podbiegach
+  // UWAGA: klasyfikować TYLKO z TYTUŁU sesji, nie z opisu (opis ma prozę: "woda"→wod, "silnik"→sil, "na starcie"→start = fałszywe trafienia; bug 13.07 pokazywał Nano na próg przez "woda łyki")
+  if(/(box|sił|siłow|silow|\bwod\b|amrap|metcon|strength|crossfit)/.test(t))return "gym"; // gym PRZED trail — "(góra/push)" łapało /gór/ → Hoka na siłę
+  if(/(próg|prog|tempo|vo2|podbieg|interw|rytm|5 ?km|10 ?km|ostr|wyścig|wyscig|\bstart|symulac|zawody)/.test(t))return "plate"; // plate PRZED trail — "pod górkę" w podbiegach
   if(/trail|szlak|teren|górsk|gorsk/.test(t))return "trail";
   return "daily";
 }
-function shoeFor(t){
+// shoeFor(tytuł, opis): kategoria z TYTUŁU; opis służy TYLKO do rozróżnienia ciężki/lekki box
+function shoeFor(t,x){
   if(!BOOT.buty||!BOOT.buty.length)return null;
-  var cat=classifySess(t),tl=(t||"").toLowerCase();
+  var cat=classifySess(t),tl=(t||"").toLowerCase(),full=((t||"")+" "+(x||"")).toLowerCase();
   var pool=BOOT.buty.filter(function(b){return b.km!=null;});
   var typ=function(b,re){return re.test((b.typ||"").toLowerCase());};
   var byTyp=function(re){return pool.filter(function(b){return typ(b,re);});};
   var fresh=function(a){return a.slice().sort(function(x,y){var rx=x.lim?x.km/x.lim:x.km/700,ry=y.lim?y.km/y.lim:y.km/700;return rx-ry;})[0];};
   var arr,reason;
   if(cat==="trail"){arr=byTyp(/trail/);reason="teren";}
-  else if(cat==="gym"){var heavy=/(siad|przysiad|squat|martw|deadlift|box ?jump|wykrok|zakrok|lunge|thruster|clean|zarzut|snatch|rwanie)/.test(tl);var gym=pool.filter(function(b){return typ(b,/siłow|silow|box/)||/metcon|nano/.test((b.n||"").toLowerCase());});var met=gym.filter(function(b){return /metcon/.test((b.n||"").toLowerCase())||typ(b,/stabil/);});var nan=gym.filter(function(b){return /nano/.test((b.n||"").toLowerCase())||typ(b,/ogóln|ogoln/);});if(heavy){arr=met.length?met:gym;reason="box — ciężka stabilność (siady/MC/box jump/wykroki) → Metcon";}else{arr=nan.length?nan:gym;reason="box — ogólny WOD → Nano";}}
+  else if(cat==="gym"){var heavy=/(siad|przysiad|squat|martw|deadlift|box ?jump|wykrok|zakrok|lunge|thruster|clean|zarzut|snatch|rwanie)/.test(full);var gym=pool.filter(function(b){return typ(b,/siłow|silow|box/)||/metcon|nano/.test((b.n||"").toLowerCase());});var met=gym.filter(function(b){return /metcon/.test((b.n||"").toLowerCase())||typ(b,/stabil/);});var nan=gym.filter(function(b){return /nano/.test((b.n||"").toLowerCase())||typ(b,/ogóln|ogoln/);});if(heavy){arr=met.length?met:gym;reason="box — ciężka stabilność (siady/MC/box jump/wykroki) → Metcon";}else{arr=nan.length?nan:gym;reason="box — ogólny WOD → Nano";}}
   else if(cat==="plate"){var pl=byTyp(/płytk|plytk|plate/);var race=/start|symulac|zawody|wyścig|wyscig/.test(tl);if(race){arr=pl;reason="start — najświeższa płyta";}else{var ne=pl.filter(function(b){return !/elite/.test((b.n||"").toLowerCase());});arr=ne.length?ne:pl;reason="jakość — płyta węglowa (Elite chowamy na start)";}}
   else{arr=byTyp(/trener|daily/);reason="easy/long — daily trainer (rotacja, oszczędza najbardziej zużyty)";}
   if(!arr||!arr.length)return null;
   var b=fresh(arr);
   return {name:b.n,km:b.km,lim:b.lim,reason:reason};
 }
-function shoeHtml(t){var s=shoeFor(t);return s?"<div class=\"shoe\">👟 Buty: <b>"+esc(s.name)+"</b> "+esc(s.km)+(s.lim?("/"+s.lim):"")+" km · "+esc(s.reason)+"</div>":"";}
+function shoeHtml(t,x){var s=shoeFor(t,x);return s?"<div class=\"shoe\">👟 Buty: <b>"+esc(s.name)+"</b> "+esc(s.km)+(s.lim?("/"+s.lim):"")+" km · "+esc(s.reason)+"</div>":"";}
 function semHtml(){var s=BOOT.semafor,names=["✅ ZIELONO","⚠️ ŻÓŁTO","⛔ CZERWONO"];var v=s.vals?("<div class=\"vals\">RHR "+esc(s.vals.rhr)+" · HRV "+esc(s.vals.hrv)+" ms · sen "+esc(s.vals.sen)+" h · świeżość "+esc(s.vals.sw)+"</div>"):"";return "<div class=\"sem l"+s.lvl+"\"><span class=\"lbl\">"+names[s.lvl]+"</span><ul>"+s.msgs.map(function(m){return "<li>"+esc(m)+"</li>";}).join("")+"</ul>"+v+"</div>";}
 function selOpts(n,sel){var h="";for(var i=1;i<=n;i++)h+="<option"+(i===sel?" selected":"")+">"+i+"</option>";return h;}
 function renderDzis(){
@@ -340,14 +342,14 @@ function renderDzis(){
     "<div class=\"form\" id=\"logform\"><div class=\"grid2\"><div><label>Dzień</label><select id=\"l-day\"><option value=\"dzis\">dziś</option><option value=\"wczoraj\">wczoraj</option></select></div><div><label>RPE</label><select id=\"l-rpe\">"+selOpts(10,7)+"</select></div><div><label>Świeżość</label><select id=\"l-sw\">"+selOpts(5,3)+"</select></div></div><label>Notatka</label><textarea id=\"l-note\" placeholder=\"odczucia z sesji…\"></textarea><div class=\"btnrow\"><button class=\"btn pri\" onclick=\"sendLog(this)\">Wyślij → Claude dociągnie z Garmina</button></div></div>";
   if(today){
     h+=cardHtml(today,false);
-    h+=shoeHtml(today.t+" "+(today.x||""));
+    h+=shoeHtml(today.t,today.x);
     if(today.st.indexOf("✓")===-1)h+="<div class=\"btnrow\"><button class=\"btn pri\" onclick=\"done('"+today.d+"',this)\">✓ Zrobione</button></div>";
     h+=logBlock;
   } else {
     h+="<div class=\"card\"><div class=\"t\">Brak karty dnia</div><div class=\"x\">Mikrocykl nie obejmuje dziś — czas na rollup i nowy tydzień. Sesję poza planem możesz i tak zalogować:</div></div>";
     h+=logBlock;
   }
-  if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false)+shoeHtml(tom.t+" "+(tom.x||""));
+  if(tom)h+="<h2>Następny trening</h2>"+cardHtml(tom,false)+shoeHtml(tom.t,tom.x);
   $("v-dzis").innerHTML=h;
 }
 function renderTydz(){var a=BOOT.adh;var h="<div class=\"chips\"><span class=\"chip\">Tydzień: <b>"+a.weekDone+"/"+a.weekDue+" ✓</b></span>"+(a.seasonPct!=null?"<span class=\"chip\">Sezon: <b>"+a.seasonPct+"% zgodnie</b> ("+a.seasonN+")</span>":"")+"</div>";var list=BOOT.plan.slice().sort(function(x,y){return x.d<y.d?1:(x.d>y.d?-1:0);});var anch=null;list.forEach(function(p){if(p.d>=BOOT.today&&(anch===null||p.d<anch))anch=p.d;});if(anch===null&&list.length)anch=list[0].d;var used=false;h+=list.map(function(p){var isA=!used&&p.d===anch;if(isA)used=true;return "<div"+(isA?" id=\"anchor-tydz\"":"")+">"+cardHtml(p,true)+"</div>";}).join("");$("v-tydz").innerHTML=h;}
